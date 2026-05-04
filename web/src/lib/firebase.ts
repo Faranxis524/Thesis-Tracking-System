@@ -31,10 +31,11 @@ if (typeof window !== 'undefined') {
   
   // Enable offline persistence only in production to avoid IndexedDB lock issues in dev
   if (process.env.NODE_ENV === 'production') {
-    enableIndexedDbPersistence(db).catch((err: any) => {
-      if (err.code === 'failed-precondition') {
+    enableIndexedDbPersistence(db).catch((err: unknown) => {
+      const code = (err as { code?: string } | null)?.code;
+      if (code === 'failed-precondition') {
         console.warn('Multiple tabs open, persistence disabled');
-      } else if (err.code === 'unimplemented') {
+      } else if (code === 'unimplemented') {
         console.warn('Persistence not supported in this browser');
       } else {
         console.warn('Could not enable persistence:', err);

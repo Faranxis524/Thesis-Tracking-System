@@ -14,7 +14,7 @@ export function ProgressBar({ value, label }: ProgressBarProps) {
       </div>
       <div className="h-2 w-full rounded-full bg-gray-100">
         <div
-          className="h-2 rounded-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 shadow-sm"
+          className="h-2 rounded-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600 shadow-sm"
           style={{ width: `${safeValue}%` }}
         />
       </div>

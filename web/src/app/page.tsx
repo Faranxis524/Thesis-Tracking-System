@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, GraduationCap, ShieldCheck, Sparkles } from "lucide-react";
+import Image from "next/image";
 
 const steps = [
   {
@@ -21,9 +22,14 @@ export default function HomePage() {
     <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-100 text-slate-900">
       <section className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-8 lg:px-10">
         <header className="flex items-center justify-between rounded-3xl border border-emerald-100 bg-white/80 px-5 py-4 shadow-sm backdrop-blur">
-          <div>
-            <div className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700">PNC Thesis Tracker</div>
-            <div className="text-xs text-slate-500">Leader and teacher workflow</div>
+          <div className="flex items-center gap-3">
+            <div className="relative h-11 w-11 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-emerald-100">
+              <Image src="/pnc-logo.png" alt="PNC logo" fill priority className="object-contain p-2" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700">PNC Thesis Tracker</div>
+              <div className="text-xs text-slate-500">Leader and teacher workflow</div>
+            </div>
           </div>
           <div className="flex gap-3">
             <Link href="/login" className="rounded-full border border-emerald-200 px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-50">

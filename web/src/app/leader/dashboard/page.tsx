@@ -9,7 +9,7 @@ import { DefenseFlow } from '@/components/DefenseFlow/DefenseFlow';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Users, FileText, Calendar, Settings, GraduationCap } from 'lucide-react';
-import { db, queries } from '@/lib/firestore/collections';
+import { queries } from '@/lib/firestore/collections';
 import { onSnapshot } from 'firebase/firestore';
 
 export default function LeaderDashboard() {
@@ -17,8 +17,8 @@ export default function LeaderDashboard() {
   const router = useRouter();
   const { fetchGroup } = useDefenseFlowStore();
   
-  const [groups, setGroups] = useState<any[]>([]);
-  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [groups, setGroups] = useState<Record<string, unknown>[]>([]);
+  const [submissions] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
 
   const groupLabel = groups.length > 0 ? `Group 1` : null;
@@ -69,7 +69,7 @@ export default function LeaderDashboard() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
           <p className="text-slate-600">Loading your dashboard...</p>
         </div>
       </div>
@@ -83,8 +83,8 @@ export default function LeaderDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <GraduationCap className="w-6 h-6 text-blue-600" />
+              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <GraduationCap className="w-6 h-6 text-emerald-700" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-900">Leader Dashboard</h1>
@@ -95,7 +95,7 @@ export default function LeaderDashboard() {
             </div>
             <div className="flex items-center gap-4">
               {groupLabel && (
-                <span className="text-sm font-medium text-blue-700 bg-blue-50 px-3 py-1 rounded-full">
+                <span className="text-sm font-medium text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full">
                   {groupLabel}
                 </span>
               )}
@@ -120,8 +120,8 @@ export default function LeaderDashboard() {
                    <p className="text-sm font-medium text-slate-600">Submissions</p>
                    <p className="text-2xl font-bold text-slate-900">{submissions.length}</p>
                  </div>
-                 <div className="p-3 bg-blue-100 rounded-xl">
-                   <FileText className="w-6 h-6 text-blue-600" />
+                 <div className="p-3 bg-emerald-100 rounded-xl">
+                   <FileText className="w-6 h-6 text-emerald-700" />
                  </div>
                </div>
              </CardContent>
@@ -148,8 +148,8 @@ export default function LeaderDashboard() {
                   <p className="text-sm font-medium text-slate-600">Defenses</p>
                   <p className="text-2xl font-bold text-slate-900">-</p>
                 </div>
-                <div className="p-3 bg-purple-100 rounded-xl">
-                  <Calendar className="w-6 h-6 text-purple-600" />
+                <div className="p-3 bg-emerald-100 rounded-xl">
+                  <Calendar className="w-6 h-6 text-emerald-700" />
                 </div>
               </div>
             </CardContent>
@@ -160,7 +160,7 @@ export default function LeaderDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Settings</p>
-                  <Button variant="ghost" size="sm" className="mt-2">
+                  <Button variant="ghost" size="sm" className="mt-2" onClick={() => router.push('/profile')}>
                     <Settings className="w-4 h-4" />
                   </Button>
                 </div>
@@ -188,8 +188,8 @@ export default function LeaderDashboard() {
         {groups.length === 0 && (
           <Card className="border-0 shadow-md">
             <CardContent className="p-12 text-center">
-              <div className="w-20 h-20 mx-auto bg-blue-50 rounded-2xl flex items-center justify-center mb-6">
-                <Plus className="w-10 h-10 text-blue-600" />
+              <div className="w-20 h-20 mx-auto bg-emerald-50 rounded-2xl flex items-center justify-center mb-6">
+                <Plus className="w-10 h-10 text-emerald-700" />
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-2">
                 No Research Groups Yet
@@ -197,7 +197,7 @@ export default function LeaderDashboard() {
               <p className="text-slate-500 mb-6 max-w-md mx-auto">
                 Create a new research group to get started with your thesis journey.
               </p>
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+              <Button size="lg">
                 <Plus className="w-5 h-5 mr-2" />
                 Create Research Group
               </Button>

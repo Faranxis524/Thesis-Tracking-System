@@ -21,45 +21,44 @@ const stages = [
     label: 'Title Approval',
     description: 'Submit research title and get committee approval',
     icon: FileText,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-100',
-    borderColor: 'border-blue-200'
+    color: 'text-emerald-700',
+    bgColor: 'bg-emerald-100',
+    borderColor: 'border-emerald-200'
   },
   {
     key: 'proposal' as const,
     label: 'Proposal Defense',
     description: 'Present and defend your research proposal',
     icon: BookOpen,
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-100',
-    borderColor: 'border-purple-200'
+    color: 'text-emerald-700',
+    bgColor: 'bg-emerald-100',
+    borderColor: 'border-emerald-200'
   },
   {
     key: 'final' as const,
     label: 'Final Defense',
     description: 'Final presentation and thesis defense',
     icon: Trophy,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-100',
-    borderColor: 'border-blue-200'
+    color: 'text-emerald-700',
+    bgColor: 'bg-emerald-100',
+    borderColor: 'border-emerald-200'
   }
 ];
 
 export function DefenseFlow({ groupId }: DefenseFlowProps) {
   const {
     currentGroup,
-    currentStage,
     loading,
     error,
     fetchGroup,
     updateStage
   } = useDefenseFlowStore();
 
-  const [requirements, setRequirements] = useState<any[]>([]);
-  const [openings, setOpenings] = useState<any[]>([]);
-  const [submissions, setSubmissions] = useState<any[]>([]);
-  const [defenses, setDefenses] = useState<any[]>([]);
-  const [members, setMembers] = useState<any[]>([]);
+  const [requirements, setRequirements] = useState<Record<string, unknown>[]>([]);
+  const [openings, setOpenings] = useState<Record<string, unknown>[]>([]);
+  const [submissions, setSubmissions] = useState<Record<string, unknown>[]>([]);
+  const [defenses, setDefenses] = useState<Record<string, unknown>[]>([]);
+  const [members, setMembers] = useState<Record<string, unknown>[]>([]);
   const [memberName, setMemberName] = useState('');
   const [titleDraft, setTitleDraft] = useState('');
   const [adviserDraft, setAdviserDraft] = useState('');
@@ -97,13 +96,13 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
         return true;
       });
     });
-  }, [currentGroup, openings, stageRequirements]);
+  }, [currentGroup, openings, stageRequirements, groupDocId]);
 
   const submissionsByRequirement = useMemo(() => {
-    if (!currentGroup) return {} as Record<string, any>;
+    if (!currentGroup) return {} as Record<string, Record<string, unknown>>;
     return submissions
       .filter((sub) => sub.groupId === groupDocId)
-      .reduce<Record<string, any>>((acc, sub) => {
+      .reduce<Record<string, Record<string, unknown>>>((acc, sub) => {
         acc[sub.requirementId] = sub;
         return acc;
       }, {});
@@ -171,10 +170,7 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
   }, [groupId, groupDocId]);
 
   useEffect(() => {
-    if (!currentGroup?.leaderId) {
-      setLeaderName(null);
-      return;
-    }
+    if (!currentGroup?.leaderId) return;
 
     const unsubscribeLeader = onSnapshot(doc(db, 'users', currentGroup.leaderId), (snap) => {
       const data = snap.data() as { displayName?: string | null } | undefined;
@@ -187,7 +183,7 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
   if (loading && !currentGroup) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
     );
   }
@@ -317,7 +313,7 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
           <span className={cn(
             "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium",
          currentGroup.status === 'active' 
-           ? 'bg-blue-100 text-blue-800' 
+           ? 'bg-emerald-100 text-emerald-900' 
            : 'bg-yellow-100 text-yellow-800'
           )}>
             {currentGroup.status === 'active' ? 'Active' : 'Pending'}
@@ -352,7 +348,7 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
               key={stage.key}
               className={cn(
                 "relative overflow-hidden transition-all duration-200",
-                isActive && "ring-2 ring-blue-500 shadow-lg",
+                isActive && "ring-2 ring-emerald-500 shadow-lg",
                 isCompleted && "opacity-90"
               )}
             >
@@ -362,8 +358,8 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
                   <CheckCircle2 className="w-6 h-6 text-green-500" />
                 )}
                 {isActive && (
-                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                  <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   </div>
                 )}
                 {isFuture && (
@@ -393,7 +389,7 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
 
                 {/* Stage Status */}
                  {isCompleted && (
-                   <div className="flex items-center text-blue-600 text-sm mb-4">
+                   <div className="flex items-center text-emerald-700 text-sm mb-4">
                      <CheckCircle2 className="w-4 h-4 mr-1" />
                      Completed
                    </div>
@@ -401,7 +397,7 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
 
                 {isActive && (
                   <div className="space-y-3">
-                    <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+                    <div className="text-sm text-emerald-700 bg-emerald-50 p-3 rounded-lg">
                       <span className="font-medium">Current Stage</span>
                       <p className="mt-1">Focus on completing this stage requirements</p>
                     </div>
@@ -473,11 +469,11 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
                          </p>
                          <p className="text-xs text-gray-500">Timing: {req.timing}</p>
                          {submission && (
-                           <p className="text-xs text-blue-600 mt-1">Status: {submission.status}</p>
+                           <p className="text-xs text-emerald-700 mt-1">Status: {submission.status}</p>
                          )}
                        </div>
                        {submission?.driveUrl && (
-                         <a className="text-sm text-blue-600" href={submission.driveUrl} target="_blank" rel="noreferrer">
+                         <a className="text-sm text-emerald-700" href={submission.driveUrl} target="_blank" rel="noreferrer">
                            View Link
                          </a>
                        )}
@@ -536,8 +532,8 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
            <div className="grid gap-4">
              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                <div className="flex items-start gap-3">
-                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                   <FileText className="h-5 w-5 text-blue-600" />
+                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
+                   <FileText className="h-5 w-5 text-emerald-700" />
                  </div>
                  <div className="flex-1">
                    <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Research Title</p>
@@ -550,8 +546,8 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
 
              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                <div className="flex items-start gap-3">
-                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                   <BookOpen className="h-5 w-5 text-purple-600" />
+                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
+                   <BookOpen className="h-5 w-5 text-emerald-700" />
                  </div>
                  <div className="flex-1">
                    <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Research Adviser</p>
@@ -700,14 +696,14 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
                   <div className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
                     isPast && "bg-green-100",
-                    isCurrent && "bg-blue-100",
+                    isCurrent && "bg-emerald-100",
                     !isPast && !isCurrent && "bg-gray-100"
                   )}>
                     {isPast && (
                       <CheckCircle2 className="w-5 h-5 text-green-600" />
                     )}
                     {isCurrent && (
-                      <div className="w-3 h-3 rounded-full bg-blue-600" />
+                      <div className="w-3 h-3 rounded-full bg-emerald-600" />
                     )}
                     {!isPast && !isCurrent && (
                       <div className="w-3 h-3 rounded-full bg-gray-300" />
@@ -717,7 +713,7 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
                     <h4 className="font-medium text-gray-900">{stage.label}</h4>
                     <p className="text-sm text-gray-500">{stage.description}</p>
                     {defense?.scheduledAt && (
-                      <p className="text-xs text-blue-600 mt-1">
+                      <p className="text-xs text-emerald-700 mt-1">
                         Scheduled: {defense.scheduledAt.toDate().toLocaleString()}
                       </p>
                     )}
@@ -728,7 +724,7 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
                       <p className="text-xs text-gray-500">Notes: {defense.notes}</p>
                     )}
                     {isCurrent && (
-                      <span className="inline-block mt-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      <span className="inline-block mt-2 text-xs bg-emerald-100 text-emerald-900 px-2 py-1 rounded">
                         In Progress
                       </span>
                     )}

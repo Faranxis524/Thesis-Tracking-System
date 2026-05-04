@@ -17,13 +17,13 @@ export default function TeacherRequirementsPage() {
   const { user, userProfile } = useAuth();
   const router = useRouter();
 
-  const [requirements, setRequirements] = useState<any[]>([]);
-  const [formOpenings, setFormOpenings] = useState<any[]>([]);
-  const [groups, setGroups] = useState<any[]>([]);
-  const [terms, setTerms] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [sections, setSections] = useState<any[]>([]);
-  const [defenses, setDefenses] = useState<any[]>([]);
+  const [requirements, setRequirements] = useState<Record<string, unknown>[]>([]);
+  const [formOpenings, setFormOpenings] = useState<Record<string, unknown>[]>([]);
+  const [groups, setGroups] = useState<Record<string, unknown>[]>([]);
+  const [terms, setTerms] = useState<Record<string, unknown>[]>([]);
+  const [departments, setDepartments] = useState<Record<string, unknown>[]>([]);
+  const [sections, setSections] = useState<Record<string, unknown>[]>([]);
+  const [defenses, setDefenses] = useState<Record<string, unknown>[]>([]);
 
   const [openingForm, setOpeningForm] = useState({
     requirementId: '',
@@ -44,8 +44,9 @@ export default function TeacherRequirementsPage() {
   });
 
   const requirementLookup = useMemo(() => {
-    return requirements.reduce<Record<string, any>>((acc, req) => {
-      acc[req.id] = req;
+    return requirements.reduce<Record<string, Record<string, unknown>>>((acc, req) => {
+      const id = String(req.id ?? '');
+      if (id) acc[id] = req;
       return acc;
     }, {});
   }, [requirements]);
@@ -73,13 +74,19 @@ export default function TeacherRequirementsPage() {
   }, [requirements]);
 
   const groupLabelLookup = useMemo(() => {
+    const getCreatedAtMillis = (group: Record<string, unknown>) => {
+      const createdAt = group.createdAt as { toMillis?: () => number } | undefined;
+      return createdAt?.toMillis?.() ?? 0;
+    };
+
     const sorted = [...groups].sort((a, b) => {
-      const aTime = a.createdAt?.toMillis?.() ?? 0;
-      const bTime = b.createdAt?.toMillis?.() ?? 0;
+      const aTime = getCreatedAtMillis(a);
+      const bTime = getCreatedAtMillis(b);
       return aTime - bTime;
     });
     return sorted.reduce<Record<string, string>>((acc, group, index) => {
-      acc[group.id] = `Group ${index + 1}`;
+      const id = String(group.id ?? '');
+      if (id) acc[id] = `Group ${index + 1}`;
       return acc;
     }, {});
   }, [groups]);

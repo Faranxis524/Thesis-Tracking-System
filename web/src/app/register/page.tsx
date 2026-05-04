@@ -1,9 +1,10 @@
 // Firebase Register Page - src/app/register/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
+import PNCBrandShell from '@/components/PNCBrandShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { User, Mail, Lock, UserCircle, GraduationCap } from 'lucide-react';
 import { useEffect } from 'react';
-import { db, queries } from '@/lib/firestore/collections';
+import { queries } from '@/lib/firestore/collections';
 import { onSnapshot } from 'firebase/firestore';
 
 export default function RegisterPage() {
@@ -26,12 +27,11 @@ export default function RegisterPage() {
     sectionId: ''
   });
   
-  const [terms, setTerms] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [sections, setSections] = useState<any[]>([]);
-  const [filteredSections, setFilteredSections] = useState<any[]>([]);
-  const [loadingInstitutions, setLoadingInstitutions] = useState(true);
+  const [terms, setTerms] = useState<Record<string, unknown>[]>([]);
+  const [departments, setDepartments] = useState<Record<string, unknown>[]>([]);
+  const [sections, setSections] = useState<Record<string, unknown>[]>([]);
   const [loadedFlags, setLoadedFlags] = useState({ terms: false, departments: false, sections: false });
+  const loadingInstitutions = !(loadedFlags.terms && loadedFlags.departments && loadedFlags.sections);
   
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -106,24 +106,11 @@ export default function RegisterPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (loadedFlags.terms && loadedFlags.departments && loadedFlags.sections) {
-      setLoadingInstitutions(false);
-    }
-  }, [loadedFlags]);
-
-  // Filter sections based on term and department
-  useEffect(() => {
+  const filteredSections = useMemo(() => {
     let filtered = sections;
-    
-    if (form.termId) {
-      filtered = filtered.filter(s => s.termId === form.termId);
-    }
-    if (form.departmentId) {
-      filtered = filtered.filter(s => s.departmentId === form.departmentId);
-    }
-    
-    setFilteredSections(filtered);
+    if (form.termId) filtered = filtered.filter((s) => s.termId === form.termId);
+    if (form.departmentId) filtered = filtered.filter((s) => s.departmentId === form.departmentId);
+    return filtered;
   }, [sections, form.termId, form.departmentId]);
 
   const handleChange = (field: string, value: string) => {
@@ -169,17 +156,18 @@ export default function RegisterPage() {
       } else {
         router.push('/teacher/dashboard');
       }
-    } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Registration failed. Please try again.';
+      setError(message);
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg">
+    <PNCBrandShell subtitle="Create your account">
+      <Card className="w-full max-w-lg bg-white/85 backdrop-blur-sm">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-full flex items-center justify-center">
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
           <CardTitle className="text-2xl">Create Your Account</CardTitle>
@@ -363,7 +351,7 @@ export default function RegisterPage() {
             <p>Already have an account?{' '}
               <a 
                 href="/login" 
-                className="font-medium text-blue-600 hover:text-blue-700"
+                className="font-medium text-emerald-700 hover:text-emerald-800"
               >
                 Sign in
               </a>
@@ -371,6 +359,6 @@ export default function RegisterPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PNCBrandShell>
   );
 }

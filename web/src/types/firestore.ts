@@ -112,7 +112,7 @@ export interface AuditLog extends BaseDocument {
   action: string;
   entityType: string;
   entityId: string;
-  meta: Record<string, any>;
+  meta: Record<string, unknown>;
 }
 
 // Revision Item
@@ -137,7 +137,7 @@ export const dateToTimestamp = (date: Date): Timestamp => {
 // Firestore data converter for type safety
 export const createConverter = <T>() => ({
   toFirestore: (data: Partial<T>) => {
-    const result: Record<string, any> = { ...data };
+    const result: Record<string, unknown> = { ...(data as Record<string, unknown>) };
     if (result.createdAt instanceof Date) {
       result.createdAt = Timestamp.fromDate(result.createdAt);
     }

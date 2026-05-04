@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Mail, Lock, GraduationCap } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -56,24 +56,16 @@ export default function LoginForm() {
           // Default to teacher dashboard if the profile cannot be read yet
           router.push('/teacher/dashboard');
         }
-    } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login failed. Please check your credentials.';
+      setError(message);
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-lg mb-4">
-            <GraduationCap className="w-10 h-10 text-blue-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">PNC Thesis Tracker</h1>
-          <p className="text-slate-600">Research Document Management System</p>
-        </div>
-        
-        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+    <div className="w-full max-w-md px-4">
+        <Card className="shadow-xl border-0 bg-white/85 backdrop-blur-sm">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl text-slate-800">Welcome Back</CardTitle>
             <CardDescription>
@@ -101,7 +93,7 @@ export default function LoginForm() {
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading}
                     required
-                    className="pl-10 h-11 border-slate-200 focus:border-blue-500"
+                    className="pl-10 h-11 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -118,14 +110,14 @@ export default function LoginForm() {
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
                     required
-                    className="pl-10 h-11 border-slate-200 focus:border-blue-500"
+                    className="pl-10 h-11 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500"
                   />
                 </div>
               </div>
               
               <Button 
                 type="submit" 
-                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
                 disabled={loading}
               >
                 {loading ? (
@@ -138,10 +130,10 @@ export default function LoginForm() {
             </form>
 
             <div className="mt-6 text-center text-sm text-slate-600">
-              <p>Don't have an account?{' '}
+              <p>Don&apos;t have an account?{' '}
                 <a 
                   href="/register" 
-                  className="font-medium text-blue-600 hover:text-blue-700"
+                  className="font-medium text-emerald-700 hover:text-emerald-800"
                 >
                   Create one
                 </a>
@@ -153,7 +145,6 @@ export default function LoginForm() {
         <div className="text-center mt-8 text-xs text-slate-500">
           <p>&copy; {new Date().getFullYear()} PNC Thesis Tracker System</p>
         </div>
-      </div>
     </div>
   );
 }

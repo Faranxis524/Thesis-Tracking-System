@@ -133,12 +133,12 @@ export const documents = {
 // Common Firestore operations
 export const firestoreOps = {
   // Create or update document
-  async set<T extends { createdAt?: any; updatedAt?: any }>(ref: DocumentReference<T>, data: Partial<T>) {
+  async set<T extends { createdAt?: unknown; updatedAt?: unknown }>(ref: DocumentReference<T>, data: Partial<T>) {
     const timestamp = Timestamp.now();
     await setDoc(ref, {
       ...data,
       updatedAt: timestamp,
-      createdAt: (data as any).createdAt || timestamp
+      createdAt: (data as { createdAt?: unknown }).createdAt || timestamp
     } as T);
   },
   
@@ -157,7 +157,7 @@ export const firestoreOps = {
   },
   
   // Delete document
-  async delete(ref: DocumentReference<any>) {
+  async delete(ref: DocumentReference<unknown>) {
     await deleteDoc(ref);
   }
 };

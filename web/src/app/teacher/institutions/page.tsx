@@ -16,9 +16,9 @@ export default function InstitutionsPage() {
   const { user, userProfile } = useAuth();
   const router = useRouter();
 
-  const [terms, setTerms] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [sections, setSections] = useState<any[]>([]);
+  const [terms, setTerms] = useState<Record<string, unknown>[]>([]);
+  const [departments, setDepartments] = useState<Record<string, unknown>[]>([]);
+  const [sections, setSections] = useState<Record<string, unknown>[]>([]);
 
   const [newTerm, setNewTerm] = useState('');
   const [newDepartment, setNewDepartment] = useState('');
@@ -108,9 +108,13 @@ export default function InstitutionsPage() {
     setEditDepartmentName(name);
   };
 
-  const startEditSection = (section: any) => {
-    setEditingSectionId(section.id);
-    setEditSection({ name: section.name ?? '', termId: section.termId ?? '', departmentId: section.departmentId ?? '' });
+  const startEditSection = (section: Record<string, unknown>) => {
+    setEditingSectionId(String(section.id ?? ''));
+    setEditSection({
+      name: String(section.name ?? ''),
+      termId: String(section.termId ?? ''),
+      departmentId: String(section.departmentId ?? ''),
+    });
   };
 
   const saveEditTerm = async () => {
@@ -359,7 +363,7 @@ export default function InstitutionsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {deleteConfirm?.type.slice(0, -1)}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deleteConfirm?.name}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{deleteConfirm?.name}&quot;? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-2 justify-end">

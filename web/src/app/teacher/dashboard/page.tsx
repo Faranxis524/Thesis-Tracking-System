@@ -31,9 +31,9 @@ export default function TeacherDashboard() {
   const router = useRouter();
   
   const [submissions, setSubmissions] = useState<SubmissionItem[]>([]);
-  const [groups, setGroups] = useState<any[]>([]);
+  const [groups, setGroups] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
-  const [requirements, setRequirements] = useState<any[]>([]);
+  const [requirements, setRequirements] = useState<Record<string, unknown>[]>([]);
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -119,16 +119,23 @@ export default function TeacherDashboard() {
     });
   };
 
-  const requirementLookup = requirements.reduce<Record<string, any>>((acc, req) => {
-    acc[req.id] = req;
+  const requirementLookup = requirements.reduce<Record<string, Record<string, unknown>>>((acc, req) => {
+    const id = String((req as Record<string, unknown>).id ?? "");
+    if (id) acc[id] = req;
     return acc;
   }, {});
 
+  const getCreatedAtMillis = (group: Record<string, unknown>) => {
+    const createdAt = group.createdAt as { toMillis?: () => number } | undefined;
+    return createdAt?.toMillis?.() ?? 0;
+  };
+
   const groupLabelLookup = groups
     .slice()
-    .sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0))
+    .sort((a, b) => getCreatedAtMillis(a) - getCreatedAtMillis(b))
     .reduce<Record<string, string>>((acc, group, index) => {
-      acc[group.id] = `Group ${index + 1}`;
+      const id = String(group.id ?? "");
+      if (id) acc[id] = `Group ${index + 1}`;
       return acc;
     }, {});
 
@@ -136,7 +143,7 @@ export default function TeacherDashboard() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
           <p className="text-slate-600">Loading dashboard...</p>
         </div>
       </div>
@@ -149,8 +156,8 @@ export default function TeacherDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <GraduationCap className="w-6 h-6 text-blue-600" />
+              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <GraduationCap className="w-6 h-6 text-emerald-700" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-900">Teacher Dashboard</h1>
@@ -160,6 +167,9 @@ export default function TeacherDashboard() {
             <div className="flex items-center gap-4">
               <Badge variant="secondary">{groups.length} Active Groups</Badge>
               <span className="text-sm text-slate-600">{userProfile?.displayName}</span>
+              <Button variant="ghost" size="sm" onClick={() => router.push('/profile')}>
+                Settings
+              </Button>
               <Button variant="ghost" size="sm" onClick={() => router.push('/teacher/institutions')}>
                 Manage Institutions
               </Button>
@@ -181,8 +191,8 @@ export default function TeacherDashboard() {
                   <p className="text-sm font-medium text-slate-600">Total Groups</p>
                   <p className="text-2xl font-bold text-slate-900">{groups.length}</p>
                 </div>
-                <div className="p-3 bg-blue-100 rounded-xl">
-                  <Users className="w-6 h-6 text-blue-600" />
+                <div className="p-3 bg-emerald-100 rounded-xl">
+                  <Users className="w-6 h-6 text-emerald-700" />
                 </div>
               </div>
             </CardContent>
@@ -261,7 +271,7 @@ export default function TeacherDashboard() {
                           ? `${requirementLookup[sub.requirementId].code} - ${requirementLookup[sub.requirementId].name}`
                           : requirementLookup[sub.requirementId]?.name || sub.requirementId}
                       </p>
-                      <p className="text-sm text-blue-600">
+                      <p className="text-sm text-emerald-700">
                         <a href={sub.driveUrl} target="_blank" rel="noreferrer">View Drive Link</a>
                       </p>
                       {sub.leaderComment && (

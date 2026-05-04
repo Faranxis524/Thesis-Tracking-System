@@ -21,6 +21,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<UserCredential>;
   register: (email: string, password: string, profileData: Partial<UserProfile>) => Promise<UserCredential>;
   logout: () => Promise<void>;
+  updateDisplayName: (displayName: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -68,11 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 } else if (mounted) {
                   setUserProfile(null);
                 }
-              } catch (firestoreError: any) {
+              } catch (firestoreError: unknown) {
                 // If offline or other Firestore error, just continue
                 // User will still be authenticated, just profile won't load
                 if (mounted) {
-                  console.warn('Could not load user profile (client offline or error):', firestoreError.message);
+                  const message = firestoreError instanceof Error ? firestoreError.message : String(firestoreError);
+                  console.warn('Could not load user profile (client offline or error):', message);
                   setUserProfile(null);
                   // Don't set loading to false here - user is still authenticated
                 }
@@ -163,13 +166,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
   };
 
+  const updateDisplayName = async (displayName: string) => {
+    if (!auth.currentUser) throw new Error('Not signed in');
+    const trimmed = displayName.trim();
+    if (!trimmed) throw new Error('Name cannot be empty');
+
+    const { updateProfile } = await import('firebase/auth');
+    await updateProfile(auth.currentUser, { displayName: trimmed });
+    await setDoc(
+      doc(db, 'users', auth.currentUser.uid),
+      { displayName: trimmed, updatedAt: Timestamp.now() } satisfies Partial<UserProfile>,
+      { merge: true }
+    );
+
+    setUserProfile((prev) => (prev ? { ...prev, displayName: trimmed, updatedAt: Timestamp.now() } : prev));
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    if (!auth.currentUser) throw new Error('Not signed in');
+    const trimmed = newPassword.trim();
+    if (trimmed.length < 6) throw new Error('Password must be at least 6 characters');
+
+    const { updatePassword: fbUpdatePassword } = await import('firebase/auth');
+    await fbUpdatePassword(auth.currentUser, trimmed);
+  };
+
   const value = {
     user,
     userProfile,
     loading,
     login,
     register,
-    logout
+    logout,
+    updateDisplayName,
+    updatePassword,
   };
 
   return (

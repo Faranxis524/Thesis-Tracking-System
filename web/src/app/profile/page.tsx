@@ -6,24 +6,29 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { queries, documents, firestoreOps } from '@/lib/firestore/collections';
 import { getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Timestamp } from 'firebase/firestore';
 
 export default function ProfilePage() {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, updateDisplayName, updatePassword } = useAuth();
   const router = useRouter();
 
   const [termId, setTermId] = useState(userProfile?.termId || '');
   const [departmentId, setDepartmentId] = useState(userProfile?.departmentId || '');
   const [sectionId, setSectionId] = useState(userProfile?.sectionId || '');
+  const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
+  const [newPassword, setNewPassword] = useState('');
 
-  const [terms, setTerms] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [sections, setSections] = useState<any[]>([]);
+  const [terms, setTerms] = useState<Record<string, unknown>[]>([]);
+  const [departments, setDepartments] = useState<Record<string, unknown>[]>([]);
+  const [sections, setSections] = useState<Record<string, unknown>[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -53,8 +58,30 @@ export default function ProfilePage() {
     return null;
   }
 
+  const handleSaveAccount = async () => {
+    setError(null);
+    setSuccess(null);
+    setSaving(true);
+    try {
+      if (displayName.trim() && displayName.trim() !== (userProfile?.displayName ?? '')) {
+        await updateDisplayName(displayName);
+      }
+      if (newPassword.trim()) {
+        await updatePassword(newPassword);
+        setNewPassword('');
+      }
+      setSuccess('Account updated.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update account';
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSave = async () => {
     setError(null);
+    setSuccess(null);
     setSaving(true);
     try {
       await firestoreOps.update(documents.user(user.uid), {
@@ -62,23 +89,59 @@ export default function ProfilePage() {
         departmentId: departmentId || null,
         sectionId: sectionId || null,
         updatedAt: Timestamp.now()
-      } as any);
+      } as Record<string, unknown>);
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Failed to save');
+      setSuccess('Profile updated.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to save';
+      setError(message);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-100 flex items-center justify-center p-4">
+      <Card className="w-full max-w-lg bg-white/85 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Profile & Institution</CardTitle>
+          <CardTitle>Settings</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {(error || success) && (
+              <Alert variant={error ? 'destructive' : 'default'}>
+                <AlertDescription>{error ?? success}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="text-sm font-semibold text-slate-900">Account</div>
+              <div className="mt-4 space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Name</Label>
+                  <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    placeholder="Leave blank to keep current password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={handleSaveAccount} disabled={saving}>
+                    {saving ? 'Saving...' : 'Save account'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="text-sm font-semibold text-slate-900">Institution</div>
+              <div className="mt-4 space-y-3">
             <div>
               <Label>Term</Label>
               <Select value={termId} onValueChange={(v) => setTermId(v)}>
@@ -121,10 +184,10 @@ export default function ProfilePage() {
               </Select>
             </div>
 
-            {error && <div className="text-sm text-red-600">{error}</div>}
-
             <div className="flex justify-end">
               <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+            </div>
+              </div>
             </div>
           </div>
         </CardContent>

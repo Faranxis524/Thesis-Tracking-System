@@ -7,15 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export default function UnauthorizedPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-red-600 to-orange-600 rounded-full flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-full flex items-center justify-center">
             <AlertCircle className="w-8 h-8 text-white" />
           </div>
           <CardTitle className="text-2xl">Access Denied</CardTitle>
           <CardDescription>
-            You don't have permission to access this page
+            You don&apos;t have permission to access this page
           </CardDescription>
         </CardHeader>
         
@@ -24,7 +24,7 @@ export default function UnauthorizedPage() {
             This may be because:
           </p>
           <ul className="text-sm text-gray-600 space-y-2 ml-4 list-disc">
-            <li>Your role doesn't match this dashboard</li>
+            <li>Your role doesn&apos;t match this dashboard</li>
             <li>Your profile is still loading</li>
             <li>You need to log in again</li>
           </ul>
