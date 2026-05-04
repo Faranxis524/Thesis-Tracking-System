@@ -8,13 +8,13 @@ export function ProgressBar({ value, label }: ProgressBarProps) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between text-xs font-semibold text-emerald-900">
+      <div className="flex items-center justify-between text-xs font-semibold text-gray-700">
         <span>{label}</span>
         <span>{safeValue}%</span>
       </div>
-      <div className="h-2 w-full rounded-full bg-emerald-100">
+      <div className="h-2 w-full rounded-full bg-gray-100">
         <div
-          className="h-2 rounded-full bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 shadow-sm"
+          className="h-2 rounded-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 shadow-sm"
           style={{ width: `${safeValue}%` }}
         />
       </div>

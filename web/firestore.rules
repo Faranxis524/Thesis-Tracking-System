@@ -1,0 +1,114 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function role() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? userDoc().data.role
+        : null;
+    }
+
+    // Role checking functions
+    function isLeader() {
+      return role() == 'leader';
+    }
+
+    function isTeacher() {
+      return role() == 'teacher';
+    }
+
+    function isTeacherOrLeader() {
+      return isTeacher() || isLeader();
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow create: if isOwner(userId);
+      allow read: if isOwner(userId) || isTeacher();
+      allow update: if isOwner(userId) || isTeacher();
+      allow delete: if isTeacher();
+    }
+
+    match /terms/{termId} {
+      allow read: if true;
+      allow write: if isTeacher();
+    }
+
+    match /colleges/{collegeId} {
+      allow read: if signedIn();
+      allow write: if isTeacher();
+    }
+
+    match /departments/{departmentId} {
+      allow read: if true;
+      allow write: if isTeacher();
+    }
+
+    match /sections/{sectionId} {
+      allow read: if true;
+      allow write: if isTeacher();
+    }
+
+    match /groups/{groupId} {
+      allow read: if signedIn() && (
+        isTeacher() || resource.data.leaderId == request.auth.uid
+      );
+      allow create: if isLeader() && request.resource.data.leaderId == request.auth.uid;
+      allow update: if isTeacher() || (isLeader() && resource.data.leaderId == request.auth.uid);
+      allow delete: if isTeacher();
+
+      match /members/{memberId} {
+        allow read: if signedIn() && (
+          isTeacher() || get(/databases/$(database)/documents/groups/$(groupId)).data.leaderId == request.auth.uid || memberId == request.auth.uid
+        );
+        allow create, update: if isTeacher() || get(/databases/$(database)/documents/groups/$(groupId)).data.leaderId == request.auth.uid;
+        allow delete: if isTeacher();
+      }
+    }
+
+    match /requirements/{requirementId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isTeacher();
+    }
+
+    match /formOpenings/{openingId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isTeacher();
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if signedIn() && (
+        isTeacher() || exists(/databases/$(database)/documents/groups/$(resource.data.groupId))
+      );
+      allow create: if isLeader();
+      allow update: if isTeacher() || isLeader();
+      allow delete: if isTeacher();
+    }
+
+    match /defenses/{defenseId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isTeacher();
+    }
+
+    match /revisionItems/{itemId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isTeacher();
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isTeacher();
+      allow create: if signedIn();
+      allow update, delete: if false;
+    }
+  }
+}

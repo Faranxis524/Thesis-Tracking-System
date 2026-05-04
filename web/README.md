@@ -1,21 +1,23 @@
-PNC Thesis Tracker (Next.js + Supabase).
+PNC Thesis Tracker (Next.js + Firebase).
 
 ## Getting Started
 
-### 1) Create a Supabase project
+### 1) Create a Firebase project
 
-- Enable **Google** provider in Authentication.
-- In the Supabase SQL editor, run the SQL files in this order:
-	- `../supabase/schema.sql`
-	- `../supabase/rls.sql`
-	- `../supabase/seed_requirements.sql`
+- Enable **Email/Password** provider in Authentication.
+- Enable Firestore Database.
+- Enable Firebase Hosting (if deploying to Firebase).
 
 ### 2) Configure environment variables
 
 Copy `.env.example` to `.env.local` and fill in:
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `NEXT_PUBLIC_FIREBASE_APP_ID`
 
 ### 3) Run the dev server
 
@@ -35,13 +37,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ### 4) Bootstrap your first admin
 
-After you sign in once (so your `profiles` row exists), set your role to `admin` in Supabase:
-
-```sql
-update public.profiles
-set role = 'admin'
-where email = 'YOUR_EMAIL@gmail.com';
-```
+After you sign in once (so your user profile exists in Firestore), your role will be set during registration. To create an admin user, you would need to modify the registration logic or update the user document directly in Firestore.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
@@ -65,4 +61,3 @@ For deployment:
 - Push this repo to GitHub.
 - Import the `web` project in Vercel.
 - Add the same env vars in Vercel Project Settings.
-- In Supabase Auth settings, add your Vercel URL as an allowed redirect.

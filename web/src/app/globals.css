@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4fbf6;
-  --foreground: #0f1f17;
+  --background: #f0f9ff;
+  --foreground: #0e1726;
   --surface: #ffffff;
-  --muted: #577064;
-  --accent: #1f8f4c;
-  --accent-dark: #0f6a34;
-  --ring: rgba(31, 143, 76, 0.25);
+  --muted: #475569;
+  --accent: #0284c7;
+  --accent-dark: #0369a1;
+  --ring: rgba(2, 132, 199, 0.25);
 }
 
 @theme inline {
@@ -19,8 +19,8 @@
 
 
 body {
-  background: radial-gradient(1200px 600px at 5% -10%, #d7f4df 0%, transparent 55%),
-    radial-gradient(1200px 700px at 110% 10%, #c7f0d6 0%, transparent 50%),
+  background: radial-gradient(1200px 600px at 5% -10%, #dbeafe 0%, transparent 55%),
+    radial-gradient(1200px 700px at 110% 10%, #bfdbfe 0%, transparent 50%),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-bricolage), "Segoe UI", system-ui, sans-serif;
@@ -28,14 +28,14 @@ body {
 
 .glass-panel {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.96));
-  border: 1px solid rgba(31, 143, 76, 0.12);
-  box-shadow: 0 24px 60px rgba(15, 31, 23, 0.08);
+  border: 1px solid rgba(2, 132, 199, 0.12);
+  box-shadow: 0 24px 60px rgba(14, 23, 38, 0.08);
 }
 
 .section-title {
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: #355d45;
+  color: #334155;
   font-weight: 700;
   font-size: 0.72rem;
 }

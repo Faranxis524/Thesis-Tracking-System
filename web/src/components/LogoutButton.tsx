@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 type LogoutButtonProps = {
   redirectTo?: string;
@@ -15,8 +16,7 @@ export function LogoutButton({ redirectTo = "/login" }: LogoutButtonProps) {
   async function onLogout() {
     setBusy(true);
     try {
-      const supabase = getSupabaseBrowserClient();
-      await supabase.auth.signOut();
+      await signOut(auth);
       router.replace(redirectTo);
     } finally {
       setBusy(false);
