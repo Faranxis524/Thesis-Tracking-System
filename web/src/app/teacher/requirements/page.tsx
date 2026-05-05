@@ -13,17 +13,19 @@ import { collections } from '@/lib/firestore/collections';
 
 type OpeningScope = 'section' | 'group';
 
+import type { Requirement, FormOpening, ResearchGroup, Term, Department, Section, Defense } from '@/types/firestore';
+
 export default function TeacherRequirementsPage() {
   const { user, userProfile } = useAuth();
   const router = useRouter();
 
-  const [requirements, setRequirements] = useState<Record<string, unknown>[]>([]);
-  const [formOpenings, setFormOpenings] = useState<Record<string, unknown>[]>([]);
-  const [groups, setGroups] = useState<Record<string, unknown>[]>([]);
-  const [terms, setTerms] = useState<Record<string, unknown>[]>([]);
-  const [departments, setDepartments] = useState<Record<string, unknown>[]>([]);
-  const [sections, setSections] = useState<Record<string, unknown>[]>([]);
-  const [defenses, setDefenses] = useState<Record<string, unknown>[]>([]);
+  const [requirements, setRequirements] = useState<Requirement[]>([]);
+  const [formOpenings, setFormOpenings] = useState<FormOpening[]>([]);
+  const [groups, setGroups] = useState<ResearchGroup[]>([]);
+  const [terms, setTerms] = useState<Term[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [defenses, setDefenses] = useState<Defense[]>([]);
 
   const [openingForm, setOpeningForm] = useState({
     requirementId: '',
@@ -44,7 +46,7 @@ export default function TeacherRequirementsPage() {
   });
 
   const requirementLookup = useMemo(() => {
-    return requirements.reduce<Record<string, Record<string, unknown>>>((acc, req) => {
+    return requirements.reduce<Record<string, Requirement>>((acc, req) => {
       const id = String(req.id ?? '');
       if (id) acc[id] = req;
       return acc;
@@ -74,8 +76,8 @@ export default function TeacherRequirementsPage() {
   }, [requirements]);
 
   const groupLabelLookup = useMemo(() => {
-    const getCreatedAtMillis = (group: Record<string, unknown>) => {
-      const createdAt = group.createdAt as { toMillis?: () => number } | undefined;
+    const getCreatedAtMillis = (group: ResearchGroup) => {
+      const createdAt = group.createdAt as Timestamp;
       return createdAt?.toMillis?.() ?? 0;
     };
 
@@ -242,11 +244,11 @@ export default function TeacherRequirementsPage() {
                         <div className="px-2 py-1 text-xs font-semibold text-slate-500">
                           {group.label}
                         </div>
-                        {group.items.map((req) => (
-                          <SelectItem key={req.id} value={req.id}>
-                            {req.code ? `${req.code} - ` : ''}{req.name}
-                          </SelectItem>
-                        ))}
+                       {group.items.map((req) => (
+                         <SelectItem key={req.id || 'unknown-req'} value={req.id || 'unknown'}>
+                           {req.code ? `${req.code} - ` : ''}{req.name}
+                         </SelectItem>
+                       ))}
                       </div>
                     ) : null
                   ))}
@@ -279,9 +281,9 @@ export default function TeacherRequirementsPage() {
                       <SelectValue placeholder="Select term" />
                     </SelectTrigger>
                     <SelectContent>
-                      {terms.map((term) => (
-                        <SelectItem key={term.id} value={term.id}>{term.name}</SelectItem>
-                      ))}
+                   {terms.map((term) => (
+                     <SelectItem key={term.id || 'unknown-term3'} value={term.id || 'unknown'}>{term.name}</SelectItem>
+                   ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -292,9 +294,9 @@ export default function TeacherRequirementsPage() {
                       <SelectValue placeholder="Select department" />
                     </SelectTrigger>
                     <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                      ))}
+                       {departments.map((dept) => (
+                         <SelectItem key={dept.id || 'unknown-dept3'} value={dept.id || 'unknown'}>{dept.name}</SelectItem>
+                       ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -305,9 +307,9 @@ export default function TeacherRequirementsPage() {
                       <SelectValue placeholder="Select section" />
                     </SelectTrigger>
                     <SelectContent>
-                      {scopedSections.map((section) => (
-                        <SelectItem key={section.id} value={section.id}>{section.name}</SelectItem>
-                      ))}
+                       {scopedSections.map((section) => (
+                         <SelectItem key={section.id || 'unknown-sec2'} value={section.id || 'unknown'}>{section.name}</SelectItem>
+                       ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -320,11 +322,11 @@ export default function TeacherRequirementsPage() {
                     <SelectValue placeholder="Select group" />
                   </SelectTrigger>
                   <SelectContent>
-                    {groups.map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {group.title || groupLabelLookup[group.id] || group.id}
-                      </SelectItem>
-                    ))}
+                     {groups.map((group) => (
+                       <SelectItem key={group.id || 'unknown-grp'} value={group.id || 'unknown'}>
+                         {group.title || (group.id && groupLabelLookup[group.id]) || String(group.id || '')}
+                       </SelectItem>
+                     ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -368,7 +370,7 @@ export default function TeacherRequirementsPage() {
                       </p>
                     ) : null}
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => toggleOpening(opening.id, !opening.isOpen)}>
+                   <Button variant="outline" size="sm" onClick={() => toggleOpening(opening.id || '', !opening.isOpen)}>
                     {opening.isOpen ? 'Close' : 'Re-open'}
                   </Button>
                 </div>
@@ -389,11 +391,11 @@ export default function TeacherRequirementsPage() {
                   <SelectValue placeholder="Select group" />
                 </SelectTrigger>
                 <SelectContent>
-                  {groups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.title || groupLabelLookup[group.id] || group.id}
-                    </SelectItem>
-                  ))}
+                   {groups.map((group) => (
+                     <SelectItem key={group.id || 'unknown-grp2'} value={group.id || 'unknown'}>
+                       {group.title || (group.id && groupLabelLookup[group.id]) || String(group.id || '')}
+                     </SelectItem>
+                   ))}
                 </SelectContent>
               </Select>
             </div>
@@ -464,10 +466,10 @@ export default function TeacherRequirementsPage() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => updateDefenseStatus(defense.id, 'done')}>
+                     <Button size="sm" variant="outline" onClick={() => updateDefenseStatus(defense.id || '', 'done')}>
                       Mark Done
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => updateDefenseStatus(defense.id, 'cancelled')}>
+                     <Button size="sm" variant="ghost" onClick={() => updateDefenseStatus(defense.id || '', 'cancelled')}>
                       Cancel
                     </Button>
                   </div>

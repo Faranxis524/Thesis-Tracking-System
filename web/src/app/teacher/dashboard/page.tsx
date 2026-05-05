@@ -266,11 +266,13 @@ export default function TeacherDashboard() {
                       <p className="text-sm text-slate-500">
                         Submitted: {sub.submittedAt ? format(sub.submittedAt.toDate(), 'MMM d, yyyy h:mm a') : 'Unknown'}
                       </p>
-                      <p className="text-sm text-slate-400">
-                        Requirement: {requirementLookup[sub.requirementId]?.code
-                          ? `${requirementLookup[sub.requirementId].code} - ${requirementLookup[sub.requirementId].name}`
-                          : requirementLookup[sub.requirementId]?.name || sub.requirementId}
-                      </p>
+                       <p className="text-sm text-slate-400">
+                         Requirement: {(() => {
+                           const req = requirementLookup[sub.requirementId] as { code?: string; name: string } | undefined;
+                           if (!req) return sub.requirementId;
+                           return req.code ? `${req.code} - ${req.name}` : req.name;
+                         })()}
+                       </p>
                       <p className="text-sm text-emerald-700">
                         <a href={sub.driveUrl} target="_blank" rel="noreferrer">View Drive Link</a>
                       </p>

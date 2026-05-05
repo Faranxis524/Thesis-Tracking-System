@@ -16,6 +16,7 @@ import { useEffect } from 'react';
 import { queries } from '@/lib/firestore/collections';
 import { onSnapshot } from 'firebase/firestore';
 
+import type { Term, Department, Section } from '@/types/firestore';
 export default function RegisterPage() {
   const [form, setForm] = useState({
     email: '',
@@ -27,9 +28,9 @@ export default function RegisterPage() {
     sectionId: ''
   });
   
-  const [terms, setTerms] = useState<Record<string, unknown>[]>([]);
-  const [departments, setDepartments] = useState<Record<string, unknown>[]>([]);
-  const [sections, setSections] = useState<Record<string, unknown>[]>([]);
+  const [terms, setTerms] = useState<Term[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
   const [loadedFlags, setLoadedFlags] = useState({ terms: false, departments: false, sections: false });
   const loadingInstitutions = !(loadedFlags.terms && loadedFlags.departments && loadedFlags.sections);
   
@@ -278,11 +279,11 @@ export default function RegisterPage() {
                         <SelectValue placeholder="Select term" />
                       </SelectTrigger>
                       <SelectContent>
-                        {terms.map((term) => (
-                          <SelectItem key={term.id} value={term.id}>
-                            {term.name}
-                          </SelectItem>
-                        ))}
+                         {terms.map((term, index) => (
+                           <SelectItem key={term.id || index} value={term.id || 'unknown'}>
+                             {term.name}
+                           </SelectItem>
+                         ))}
                       </SelectContent>
                     </Select>
                     {!loadingInstitutions && terms.length === 0 && (
@@ -297,11 +298,11 @@ export default function RegisterPage() {
                         <SelectValue placeholder="Select department" />
                       </SelectTrigger>
                       <SelectContent>
-                        {departments.map((department) => (
-                          <SelectItem key={department.id} value={department.id}>
-                            {department.name}
-                          </SelectItem>
-                        ))}
+                         {departments.map((department, index) => (
+                           <SelectItem key={department.id || index} value={department.id || 'unknown'}>
+                             {department.name}
+                           </SelectItem>
+                         ))}
                       </SelectContent>
                     </Select>
                     {!loadingInstitutions && departments.length === 0 && (
@@ -320,11 +321,11 @@ export default function RegisterPage() {
                         <SelectValue placeholder="Select section" />
                       </SelectTrigger>
                       <SelectContent>
-                        {filteredSections.map((section) => (
-                          <SelectItem key={section.id} value={section.id}>
-                            {section.name}
-                          </SelectItem>
-                        ))}
+                         {filteredSections.map((section, index) => (
+                           <SelectItem key={section.id || index} value={section.id || 'unknown'}>
+                             {section.name}
+                           </SelectItem>
+                         ))}
                       </SelectContent>
                     </Select>
                     {!loadingInstitutions && filteredSections.length === 0 && (

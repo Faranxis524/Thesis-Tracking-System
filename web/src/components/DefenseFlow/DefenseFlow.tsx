@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { AlertCircle, CheckCircle2, Clock, BookOpen, Trophy, FileText, MessageSquare, Edit, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { onSnapshot, addDoc, Timestamp, doc, updateDoc, collection, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firestore/collections';
+import { onSnapshot, addDoc, Timestamp, doc, updateDoc, collection, query, where, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { collections } from '@/lib/firestore/collections';
 
 interface DefenseFlowProps {
   groupId: string;
@@ -80,19 +81,26 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
   const openRequirements = useMemo(() => {
     if (!currentGroup) return [];
     const now = new Date();
-    return stageRequirements.filter((req) => {
-      const relatedOpenings = openings.filter((opening) => opening.requirementId === req.id && opening.isOpen);
-      return relatedOpenings.some((opening) => {
-        const deadlineOk = !opening.deadlineAt || opening.deadlineAt.toDate() >= now;
-        if (!deadlineOk) return false;
+     return stageRequirements.filter((req) => {
+       const relatedOpenings = openings.filter((opening) => {
+         const reqId = opening.requirementId as string | undefined;
+         const reqId2 = req.id as string | undefined;
+         return reqId === reqId2 && opening.isOpen;
+       });
+       return relatedOpenings.some((opening) => {
+         const deadlineAt = opening.deadlineAt as Timestamp | undefined;
+         const deadlineOk = !deadlineAt || deadlineAt.toDate() >= now;
+         if (!deadlineOk) return false;
 
-        if (opening.scopeType === 'group') {
-          return (opening.groupIds || []).includes(groupDocId);
-        }
+         if (opening.scopeType === 'group') {
+           const groupIds = opening.groupIds as string[] | undefined;
+           return (groupIds || []).includes(groupDocId);
+         }
 
-        if (opening.sectionId) {
-          return opening.sectionId === currentGroup.sectionId;
-        }
+         if (opening.sectionId) {
+           const secId = opening.sectionId as string;
+           return secId === currentGroup.sectionId;
+         }
         return true;
       });
     });
@@ -103,34 +111,36 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
     return submissions
       .filter((sub) => sub.groupId === groupDocId)
       .reduce<Record<string, Record<string, unknown>>>((acc, sub) => {
-        acc[sub.requirementId] = sub;
+        const reqId = sub.requirementId as string;
+        acc[reqId] = sub;
         return acc;
       }, {});
   }, [currentGroup, submissions, groupDocId]);
 
-  const groupingReqId = requirements.find((req) => req.code === 'PNC:PRE-FO-64/65')?.id;
+  const groupingReqId = requirements.find((req) => req.code === 'PNC:PRE-FO-64/65')?.id as string | undefined;
   const canEditMembers = groupingReqId
     ? submissionsByRequirement[groupingReqId]?.status === 'approved'
     : false;
 
-  const adviserReqId = requirements.find((req) => req.code === 'PNC:PRE-FO-59')?.id;
+  const adviserReqId = requirements.find((req) => req.code === 'PNC:PRE-FO-59')?.id as string | undefined;
   const canEditAdviser = adviserReqId
     ? submissionsByRequirement[adviserReqId]?.status === 'approved'
     : false;
 
-  const titleDefenseApproved = defenses.some(
-    (defense) => defense.groupId === groupDocId && defense.stage === 'title' && defense.status === 'done'
-  );
+   const titleDefenseApproved = defenses.some(
+     (defense) => (defense.groupId as string) === groupDocId && (defense.stage as string) === 'title' && defense.status === 'done'
+   );
   const canEditTitle = titleDefenseApproved;
 
-  const currentDefenseDone = defenses.some(
-    (defense) => defense.groupId === groupDocId && defense.stage === stageKey && defense.status === 'done'
-  );
+   const currentDefenseDone = defenses.some(
+     (defense) => (defense.groupId as string) === groupDocId && (defense.stage as string) === stageKey && defense.status === 'done'
+   );
 
-  const stageApproved = beforeStageRequirements.every((req) => {
-    const submission = submissionsByRequirement[req.id];
-    return submission?.status === 'approved';
-  });
+   const stageApproved = beforeStageRequirements.every((req) => {
+     const reqId = req.id as string | undefined;
+     const submission = submissionsByRequirement[reqId as string];
+     return submission?.status === 'approved';
+   });
 
   const canAdvanceStage = stageApproved && currentDefenseDone;
 
@@ -232,9 +242,9 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
     if (!link) return;
     const existing = submissionsByRequirement[reqId];
 
-    if (existing) {
-      await updateDoc(doc(db, 'submissions', existing.id), {
-        driveUrl: link,
+     if (existing) {
+       await updateDoc(doc(db, 'submissions', String(existing.id || '')), {
+         driveUrl: link,
         status: existing.status === 'needs_revision' ? 'resubmitted' : 'submitted',
         submittedAt: Timestamp.now(),
         updatedAt: Timestamp.now()
@@ -455,64 +465,65 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
              <p className="text-sm text-gray-500">No open requirements for this stage yet.</p>
            ) : (
              <div className="space-y-4">
-               {openRequirements.map((req) => {
-                 const submission = submissionsByRequirement[req.id];
-                 const isEditing = editingLinks[req.id] ?? false;
+                {openRequirements.map((req) => {
+                  const reqId = req.id as string | undefined;
+                  const submission = submissionsByRequirement[reqId as string];
+                  const isEditing = editingLinks[reqId as string] ?? false;
                  const isApproved = submission?.status === 'approved';
                  const isSubmitted = submission?.status === 'submitted' || submission?.status === 'approved';
                  return (
-                   <div key={req.id} className="rounded-lg border p-4">
-                     <div className="flex items-start justify-between">
-                       <div>
-                         <p className="font-medium text-gray-900">
-                           {req.code ? `${req.code} - ` : ''}{req.name}
-                         </p>
-                         <p className="text-xs text-gray-500">Timing: {req.timing}</p>
-                         {submission && (
-                           <p className="text-xs text-emerald-700 mt-1">Status: {submission.status}</p>
-                         )}
-                       </div>
-                       {submission?.driveUrl && (
-                         <a className="text-sm text-emerald-700" href={submission.driveUrl} target="_blank" rel="noreferrer">
-                           View Link
-                         </a>
-                       )}
-                     </div>
-                     <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-                       <input
-                         className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-                         placeholder="Paste Google Drive link"
-                         value={driveLinks[req.id] ?? submission?.driveUrl ?? ''}
-                         onChange={(e) => setDriveLinks((prev) => ({ ...prev, [req.id]: e.target.value }))}
-                         disabled={isSubmitted && !isEditing}
-                       />
+                    <div key={reqId} className="rounded-lg border p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {((req.code as string) || req.name) ? `${req.code as string} - ` : ''}{(req.name as string)}
+                          </p>
+                          <p className="text-xs text-gray-500">Timing: {req.timing as string}</p>
+                        {submission && (
+                          <p className="text-xs text-emerald-700 mt-1">Status: {submission.status as string}</p>
+                        )}
+                        </div>
+                        {(submission?.driveUrl as string | undefined) && (
+                          <a className="text-sm text-emerald-700" href={submission.driveUrl as string} target="_blank" rel="noreferrer">
+                            View Link
+                          </a>
+                        )}
+                      </div>
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <input
+                          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          placeholder="Paste Google Drive link"
+                          value={driveLinks[reqId as string] ?? submission?.driveUrl ?? ''}
+                          onChange={(e) => setDriveLinks((prev) => ({ ...prev, [reqId as string]: e.target.value }))}
+                          disabled={isSubmitted && !isEditing}
+                        />
 {isApproved ? (
                           <Button size="sm" disabled={true} className="opacity-50 cursor-not-allowed">
                             Approved
                           </Button>
-                        ) : isSubmitted && !isEditing ? (
-                          <Button size="sm" variant="outline" onClick={() => setEditingLinks((prev) => ({ ...prev, [req.id]: true }))}>
-                            <Edit className="w-3 h-3 mr-1" />
-                            Resubmit
-                          </Button>
-                        ) : submission?.status === 'needs_revision' ? (
-                          <Button size="sm" onClick={() => submitRequirement(req.id)}>
+                         ) : isSubmitted && !isEditing ? (
+                           <Button size="sm" variant="outline" onClick={() => setEditingLinks((prev) => ({ ...prev, [reqId as string]: true }))}>
+                             <Edit className="w-3 h-3 mr-1" />
+                             Resubmit
+                           </Button>
+                         ) : submission?.status === 'needs_revision' ? (
+                           <Button size="sm" onClick={() => submitRequirement(reqId as string)}>
                             Resubmit
                           </Button>
                         ) : (
                           <Button
                             size="sm"
-                            onClick={() => submitRequirement(req.id)}
+                             onClick={() => submitRequirement(reqId as string)}
                             disabled={isSubmitted && !isEditing}
                           >
                             {isEditing ? 'Update' : 'Submit'}
                           </Button>
                         )}
                      </div>
-                     {submission?.remarks && (
+                      {(submission?.remarks as string | undefined) && (
                        <p className="mt-2 text-xs text-slate-600 flex items-center gap-1.5">
                          <MessageSquare className="h-3.5 w-3.5 text-slate-500" />
-                         <span className="font-medium text-slate-700">Comment:</span> {submission.remarks}
+                          <span className="font-medium text-slate-700">Comment:</span> {submission.remarks as string}
                        </p>
                      )}
                    </div>
@@ -590,9 +601,9 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
                        <p className="mt-1 text-base italic text-slate-500">No members added yet.</p>
                      ) : (
                        <div className="mt-2 space-y-1">
-                         {members.map((member) => (
-                           <p key={member.id} className="text-base text-slate-700">• {member.displayName || member.userId}</p>
-                         ))}
+                          {members.map((member) => (
+                            <p key={member.id as string} className="text-base text-slate-700">• {(member.displayName as string | undefined) || (member.userId as string)}</p>
+                          ))}
                        </div>
                      )
                    ) : (
@@ -628,9 +639,9 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
                   <Button size="sm" onClick={addMember}>Add</Button>
                 </div>
                 <div className="space-y-1">
-                  {members.map((member) => (
-                    <p key={member.id} className="text-sm text-gray-700">• {member.displayName || member.userId}</p>
-                  ))}
+                   {members.map((member) => (
+                     <p key={member.id as string} className="text-sm text-gray-700">• {(member.displayName as string | undefined) || member.userId as string}</p>
+                   ))}
                 </div>
               </div>
             ) : (
@@ -712,17 +723,17 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
                   <div className="flex-1 pb-4 border-l-2 border-gray-200 pl-4">
                     <h4 className="font-medium text-gray-900">{stage.label}</h4>
                     <p className="text-sm text-gray-500">{stage.description}</p>
-                    {defense?.scheduledAt && (
-                      <p className="text-xs text-emerald-700 mt-1">
-                        Scheduled: {defense.scheduledAt.toDate().toLocaleString()}
-                      </p>
+                     {(defense?.scheduledAt as Timestamp | undefined) && (
+                       <p className="text-xs text-emerald-700 mt-1">
+                         Scheduled: {(defense?.scheduledAt as Timestamp | undefined)?.toDate().toLocaleString()}
+                       </p>
                     )}
-                    {defense?.meetLink && (
-                      <p className="text-xs text-gray-500">Location/Link: {defense.meetLink}</p>
+                     {(defense?.meetLink as string | undefined) && (
+                       <p className="text-xs text-gray-500">Location/Link: {defense?.meetLink as string}</p>
                     )}
-                    {defense?.notes && (
-                      <p className="text-xs text-gray-500">Notes: {defense.notes}</p>
-                    )}
+                     {(defense?.notes as string | undefined) && (
+                       <p className="text-xs text-gray-500">Notes: {defense?.notes as string}</p>
+                     )}
                     {isCurrent && (
                       <span className="inline-block mt-2 text-xs bg-emerald-100 text-emerald-900 px-2 py-1 rounded">
                         In Progress

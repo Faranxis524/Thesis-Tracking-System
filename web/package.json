@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "export": "next export",
+    "vercel-build": "npm run build"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.0.0",

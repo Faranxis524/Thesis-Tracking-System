@@ -12,13 +12,15 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
+import type { Term, Department, Section } from '@/types/firestore';
+
 export default function InstitutionsPage() {
   const { user, userProfile } = useAuth();
   const router = useRouter();
 
-  const [terms, setTerms] = useState<Record<string, unknown>[]>([]);
-  const [departments, setDepartments] = useState<Record<string, unknown>[]>([]);
-  const [sections, setSections] = useState<Record<string, unknown>[]>([]);
+  const [terms, setTerms] = useState<Term[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
 
   const [newTerm, setNewTerm] = useState('');
   const [newDepartment, setNewDepartment] = useState('');
@@ -108,7 +110,7 @@ export default function InstitutionsPage() {
     setEditDepartmentName(name);
   };
 
-  const startEditSection = (section: Record<string, unknown>) => {
+  const startEditSection = (section: Section) => {
     setEditingSectionId(String(section.id ?? ''));
     setEditSection({
       name: String(section.name ?? ''),
@@ -203,30 +205,30 @@ export default function InstitutionsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {terms.map(t => (
-                <div key={t.id} className="flex items-center justify-between">
-                  {editingTermId === t.id ? (
-                    <div className="flex-1 mr-2">
-                      <Input value={editTermName} onChange={(e) => setEditTermName(e.target.value)} />
-                    </div>
-                  ) : (
-                    <div>{t.name}</div>
-                  )}
-                  <div className="flex gap-2">
-                    {editingTermId === t.id ? (
-                      <>
-                        <Button variant="outline" onClick={saveEditTerm}>Save</Button>
-                        <Button variant="ghost" onClick={() => setEditingTermId(null)}>Cancel</Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button variant="outline" onClick={() => startEditTerm(t.id, t.name)}>Edit</Button>
-                        <Button variant="ghost" onClick={() => removeDoc('terms', t.id, t.name)}>Delete</Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
+               {terms.map(t => (
+                 <div key={t.id || 'unknown'} className="flex items-center justify-between">
+                   {editingTermId === t.id ? (
+                     <div className="flex-1 mr-2">
+                       <Input value={editTermName} onChange={(e) => setEditTermName(e.target.value)} />
+                     </div>
+                   ) : (
+                     <div>{t.name}</div>
+                   )}
+                   <div className="flex gap-2">
+                     {editingTermId === t.id ? (
+                       <>
+                         <Button variant="outline" onClick={saveEditTerm}>Save</Button>
+                         <Button variant="ghost" onClick={() => setEditingTermId(null)}>Cancel</Button>
+                       </>
+                     ) : (
+                       <>
+                         <Button variant="outline" onClick={() => startEditTerm(t.id || '', t.name || '')}>Edit</Button>
+                         <Button variant="ghost" onClick={() => removeDoc('terms', t.id || '', t.name || '')}>Delete</Button>
+                       </>
+                     )}
+                   </div>
+                 </div>
+               ))}
 
               <div className="pt-4">
                 <Label>New term</Label>
@@ -245,30 +247,30 @@ export default function InstitutionsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {departments.map(d => (
-                <div key={d.id} className="flex items-center justify-between">
-                  {editingDepartmentId === d.id ? (
-                    <div className="flex-1 mr-2">
-                      <Input value={editDepartmentName} onChange={(e) => setEditDepartmentName(e.target.value)} />
-                    </div>
-                  ) : (
-                    <div>{d.name}</div>
-                  )}
-                  <div className="flex gap-2">
-                    {editingDepartmentId === d.id ? (
-                      <>
-                        <Button variant="outline" onClick={saveEditDepartment}>Save</Button>
-                        <Button variant="ghost" onClick={() => setEditingDepartmentId(null)}>Cancel</Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button variant="outline" onClick={() => startEditDepartment(d.id, d.name)}>Edit</Button>
-                        <Button variant="ghost" onClick={() => removeDoc('departments', d.id, d.name)}>Delete</Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
+               {departments.map(d => (
+                 <div key={d.id || 'unknown'} className="flex items-center justify-between">
+                   {editingDepartmentId === d.id ? (
+                     <div className="flex-1 mr-2">
+                       <Input value={editDepartmentName} onChange={(e) => setEditDepartmentName(e.target.value)} />
+                     </div>
+                   ) : (
+                     <div>{d.name}</div>
+                   )}
+                   <div className="flex gap-2">
+                     {editingDepartmentId === d.id ? (
+                       <>
+                         <Button variant="outline" onClick={saveEditDepartment}>Save</Button>
+                         <Button variant="ghost" onClick={() => setEditingDepartmentId(null)}>Cancel</Button>
+                       </>
+                     ) : (
+                       <>
+                         <Button variant="outline" onClick={() => startEditDepartment(d.id || '', d.name || '')}>Edit</Button>
+                         <Button variant="ghost" onClick={() => removeDoc('departments', d.id || '', d.name || '')}>Delete</Button>
+                       </>
+                     )}
+                   </div>
+                 </div>
+               ))}
 
               <div className="pt-4">
                 <Label>New department</Label>
@@ -287,46 +289,46 @@ export default function InstitutionsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {sections.map(s => (
-                <div key={s.id} className="flex items-center justify-between">
-                  {editingSectionId === s.id ? (
-                    <div className="flex-1 mr-2 space-y-2">
-                      <Input value={editSection.name} onChange={(e) => setEditSection(prev => ({ ...prev, name: e.target.value }))} />
-                      <Select value={editSection.termId} onValueChange={(v) => setEditSection(prev => ({ ...prev, termId: v }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select term" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {terms.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <Select value={editSection.departmentId} onValueChange={(v) => setEditSection(prev => ({ ...prev, departmentId: v }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select department" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ) : (
-                    <div>{s.name}</div>
-                  )}
-                  <div className="flex gap-2">
-                    {editingSectionId === s.id ? (
-                      <>
-                        <Button variant="outline" onClick={saveEditSection}>Save</Button>
-                        <Button variant="ghost" onClick={() => setEditingSectionId(null)}>Cancel</Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button variant="outline" onClick={() => startEditSection(s)}>Edit</Button>
-                        <Button variant="ghost" onClick={() => removeDoc('sections', s.id, s.name)}>Delete</Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
+               {sections.map(s => (
+                 <div key={s.id || 'unknown'} className="flex items-center justify-between">
+                   {editingSectionId === s.id ? (
+                     <div className="flex-1 mr-2 space-y-2">
+                       <Input value={editSection.name} onChange={(e) => setEditSection(prev => ({ ...prev, name: e.target.value }))} />
+                       <Select value={editSection.termId} onValueChange={(v) => setEditSection(prev => ({ ...prev, termId: v }))}>
+                         <SelectTrigger>
+                           <SelectValue placeholder="Select term" />
+                         </SelectTrigger>
+                         <SelectContent>
+                           {terms.map(t => <SelectItem key={t.id || 'unknown-term'} value={t.id || 'unknown'}>{t.name}</SelectItem>)}
+                         </SelectContent>
+                       </Select>
+                       <Select value={editSection.departmentId} onValueChange={(v) => setEditSection(prev => ({ ...prev, departmentId: v }))}>
+                         <SelectTrigger>
+                           <SelectValue placeholder="Select department" />
+                         </SelectTrigger>
+                         <SelectContent>
+                           {departments.map(d => <SelectItem key={d.id || 'unknown-dept'} value={d.id || 'unknown'}>{d.name}</SelectItem>)}
+                         </SelectContent>
+                       </Select>
+                     </div>
+                   ) : (
+                     <div>{s.name}</div>
+                   )}
+                   <div className="flex gap-2">
+                     {editingSectionId === s.id ? (
+                       <>
+                         <Button variant="outline" onClick={saveEditSection}>Save</Button>
+                         <Button variant="ghost" onClick={() => setEditingSectionId(null)}>Cancel</Button>
+                       </>
+                     ) : (
+                       <>
+                         <Button variant="outline" onClick={() => startEditSection(s)}>Edit</Button>
+                         <Button variant="ghost" onClick={() => removeDoc('sections', s.id || '', s.name || '')}>Delete</Button>
+                       </>
+                     )}
+                   </div>
+                 </div>
+               ))}
 
               <div className="pt-4 space-y-2">
                 <Label>New section</Label>
@@ -337,17 +339,17 @@ export default function InstitutionsPage() {
                     <SelectValue placeholder="Select term" />
                   </SelectTrigger>
                   <SelectContent>
-                    {terms.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Label>Department</Label>
-                <Select value={newSection.departmentId} onValueChange={(v) => setNewSection(s => ({ ...s, departmentId: v }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                  </SelectContent>
+                     {terms.map(t => <SelectItem key={t.id || 'unknown-term2'} value={t.id || 'unknown'}>{t.name}</SelectItem>)}
+                   </SelectContent>
+                 </Select>
+                 <Label>Department</Label>
+                 <Select value={newSection.departmentId} onValueChange={(v) => setNewSection(s => ({ ...s, departmentId: v }))}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Select department" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {departments.map(d => <SelectItem key={d.id || 'unknown-dept2'} value={d.id || 'unknown'}>{d.name}</SelectItem>)}
+                   </SelectContent>
                 </Select>
                 <div className="flex justify-end">
                   <Button onClick={createSection}>Add section</Button>

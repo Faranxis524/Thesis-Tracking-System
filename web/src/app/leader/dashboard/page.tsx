@@ -11,14 +11,15 @@ import { Button } from '@/components/ui/button';
 import { Plus, Users, FileText, Calendar, Settings, GraduationCap } from 'lucide-react';
 import { queries } from '@/lib/firestore/collections';
 import { onSnapshot } from 'firebase/firestore';
+import type { ResearchGroup, Submission } from '@/types/firestore';
 
 export default function LeaderDashboard() {
   const { user, userProfile, logout } = useAuth();
   const router = useRouter();
   const { fetchGroup } = useDefenseFlowStore();
   
-  const [groups, setGroups] = useState<Record<string, unknown>[]>([]);
-  const [submissions] = useState<Record<string, unknown>[]>([]);
+  const [groups, setGroups] = useState<ResearchGroup[]>([]);
+  const [submissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
 
   const groupLabel = groups.length > 0 ? `Group 1` : null;
@@ -60,7 +61,7 @@ export default function LeaderDashboard() {
 
   useEffect(() => {
     if (groups.length > 0) {
-      const groupId = groups[0].id;
+      const groupId = groups[0].id as string;
       fetchGroup(groupId);
     }
   }, [groups, fetchGroup]);
@@ -179,7 +180,7 @@ export default function LeaderDashboard() {
               <CardTitle>Research Defense Progress</CardTitle>
             </CardHeader>
             <CardContent>
-              <DefenseFlow groupId={groups[0].id} />
+              <DefenseFlow groupId={groups[0].id || ''} />
             </CardContent>
           </Card>
         )}

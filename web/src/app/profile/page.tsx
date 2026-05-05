@@ -12,6 +12,7 @@ import { queries, documents, firestoreOps } from '@/lib/firestore/collections';
 import { getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Timestamp } from 'firebase/firestore';
+import type { Term, Department, Section } from '@/types/firestore';
 
 export default function ProfilePage() {
   const { user, userProfile, updateDisplayName, updatePassword } = useAuth();
@@ -23,9 +24,9 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
   const [newPassword, setNewPassword] = useState('');
 
-  const [terms, setTerms] = useState<Record<string, unknown>[]>([]);
-  const [departments, setDepartments] = useState<Record<string, unknown>[]>([]);
-  const [sections, setSections] = useState<Record<string, unknown>[]>([]);
+  const [terms, setTerms] = useState<Term[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -149,9 +150,9 @@ export default function ProfilePage() {
                   <SelectValue placeholder="Select term" />
                 </SelectTrigger>
                 <SelectContent>
-                  {terms.map(t => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
+                   {terms.map((t, index) => (
+                     <SelectItem key={t.id || index} value={t.id || 'unknown'}>{t.name}</SelectItem>
+                   ))}
                 </SelectContent>
               </Select>
             </div>
@@ -163,9 +164,9 @@ export default function ProfilePage() {
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map(d => (
-                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                  ))}
+                    {departments.map((d, index) => (
+                      <SelectItem key={d.id || index} value={d.id || 'unknown'}>{d.name}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -177,9 +178,9 @@ export default function ProfilePage() {
                   <SelectValue placeholder="Select section" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sections.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
+                   {sections.map((s, index) => (
+                     <SelectItem key={s.id || index} value={s.id || 'unknown'}>{s.name}</SelectItem>
+                   ))}
                 </SelectContent>
               </Select>
             </div>
