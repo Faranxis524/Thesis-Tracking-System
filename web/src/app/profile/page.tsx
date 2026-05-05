@@ -17,6 +17,7 @@ import type { Term, Department, Section } from '@/types/firestore';
 export default function ProfilePage() {
   const { user, userProfile, updateDisplayName, updatePassword } = useAuth();
   const router = useRouter();
+  const dashboardPath = userProfile?.role === 'teacher' ? '/teacher/dashboard' : '/leader/dashboard';
 
   const [termId, setTermId] = useState(userProfile?.termId || '');
   const [departmentId, setDepartmentId] = useState(userProfile?.departmentId || '');
@@ -102,8 +103,18 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg bg-white/85 backdrop-blur-sm">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-100 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto mb-6 flex w-full max-w-5xl items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
+          <p className="text-sm text-slate-500">Update your account and institution details.</p>
+        </div>
+        <Button variant="outline" onClick={() => router.push(dashboardPath)}>
+          Back to Dashboard
+        </Button>
+      </div>
+
+      <Card className="mx-auto w-full max-w-5xl bg-white/85 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Settings</CardTitle>
         </CardHeader>
@@ -142,52 +153,55 @@ export default function ProfilePage() {
 
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <div className="text-sm font-semibold text-slate-900">Institution</div>
+              <p className="mt-2 text-sm text-slate-500">
+                Keep your term, department, and section updated.
+              </p>
               <div className="mt-4 space-y-3">
-            <div>
-              <Label>Term</Label>
-              <Select value={termId} onValueChange={(v) => setTermId(v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select term" />
-                </SelectTrigger>
-                <SelectContent>
-                   {terms.map((t, index) => (
-                     <SelectItem key={t.id || index} value={t.id || 'unknown'}>{t.name}</SelectItem>
-                   ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <div>
+                  <Label>Term</Label>
+                  <Select value={termId} onValueChange={(v) => setTermId(v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select term" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {terms.map((t, index) => (
+                        <SelectItem key={t.id || index} value={t.id || 'unknown'}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div>
-              <Label>Department</Label>
-              <Select value={departmentId} onValueChange={(v) => setDepartmentId(v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                    {departments.map((d, index) => (
-                      <SelectItem key={d.id || index} value={d.id || 'unknown'}>{d.name}</SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <div>
+                  <Label>Department</Label>
+                  <Select value={departmentId} onValueChange={(v) => setDepartmentId(v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((d, index) => (
+                        <SelectItem key={d.id || index} value={d.id || 'unknown'}>{d.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div>
-              <Label>Section</Label>
-              <Select value={sectionId} onValueChange={(v) => setSectionId(v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select section" />
-                </SelectTrigger>
-                <SelectContent>
-                   {sections.map((s, index) => (
-                     <SelectItem key={s.id || index} value={s.id || 'unknown'}>{s.name}</SelectItem>
-                   ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <div>
+                  <Label>Section</Label>
+                  <Select value={sectionId} onValueChange={(v) => setSectionId(v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select section" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sections.map((s, index) => (
+                        <SelectItem key={s.id || index} value={s.id || 'unknown'}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="flex justify-end">
-              <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
-            </div>
+                <div className="flex justify-end">
+                  <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+                </div>
               </div>
             </div>
           </div>

@@ -2,16 +2,18 @@
 'use client';
 
 import { useAuth } from '@/lib/auth/AuthContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Users, CheckCircle, Clock, AlertCircle, FileText, MessageSquare, GraduationCap } from 'lucide-react';
 import { collection, doc, onSnapshot, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format } from 'date-fns';
+import type { ResearchGroup } from '@/types/firestore';
 
 interface SubmissionItem {
   id: string;
@@ -31,10 +33,12 @@ export default function TeacherDashboard() {
   const router = useRouter();
   
   const [submissions, setSubmissions] = useState<SubmissionItem[]>([]);
-  const [groups, setGroups] = useState<Record<string, unknown>[]>([]);
+  const [groups, setGroups] = useState<ResearchGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [requirements, setRequirements] = useState<Record<string, unknown>[]>([]);
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [groupTitleDrafts, setGroupTitleDrafts] = useState<Record<string, string>>({});
+  const [leaderNames, setLeaderNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (user === null) {
@@ -50,7 +54,7 @@ export default function TeacherDashboard() {
     const unsubscribeGroups = onSnapshot(
       collection(db, 'groups'),
       (snapshot) => {
-        const groupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const groupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ResearchGroup[];
         setGroups(groupsData);
       }
     );
@@ -81,6 +85,23 @@ export default function TeacherDashboard() {
       unsubscribeSubmissions();
     };
   }, [user, userProfile, router]);
+
+  useEffect(() => {
+    const uniqueLeaderIds = Array.from(new Set(groups.map((group) => String(group.leaderId ?? '')).filter(Boolean)));
+    const unsubscribers = uniqueLeaderIds.map((leaderId) => {
+      return onSnapshot(doc(db, 'users', leaderId), (snap) => {
+        const data = snap.data() as { displayName?: string | null } | undefined;
+        setLeaderNames((prev) => ({
+          ...prev,
+          [leaderId]: data?.displayName?.trim() || leaderId
+        }));
+      });
+    });
+
+    return () => {
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
+    };
+  }, [groups]);
 
   const pendingCount = submissions.filter(s => s.status === 'submitted').length;
   const approvedCount = submissions.filter(s => s.status === 'approved').length;
@@ -125,7 +146,38 @@ export default function TeacherDashboard() {
     return acc;
   }, {});
 
-  const getCreatedAtMillis = (group: Record<string, unknown>) => {
+  const groupingRequirementId = useMemo(() => {
+    const groupingReq = requirements.find((req) => (req.code as string | undefined) === 'PNC:PRE-FO-64/65');
+    return String(groupingReq?.id ?? '');
+  }, [requirements]);
+
+  const approvedGroupingGroupIds = useMemo(() => {
+    if (!groupingRequirementId) return new Set<string>();
+    return new Set(
+      submissions
+        .filter((sub) => sub.requirementId === groupingRequirementId && sub.status === 'approved')
+        .map((sub) => sub.groupId)
+    );
+  }, [groupingRequirementId, submissions]);
+
+  const approvedGroups = useMemo(() => {
+    return groups.filter((group) => approvedGroupingGroupIds.has(group.id || ''));
+  }, [approvedGroupingGroupIds, groups]);
+
+  const saveGroupTitle = async (groupId: string) => {
+    const nextTitle = groupTitleDrafts[groupId]?.trim();
+    if (!nextTitle) return;
+
+    await updateDoc(doc(db, 'groups', groupId), {
+      title: nextTitle,
+      updatedAt: Timestamp.now()
+    });
+
+    setGroupTitleDrafts((prev) => ({ ...prev, [groupId]: nextTitle }));
+  };
+
+
+  const getCreatedAtMillis = (group: ResearchGroup | Record<string, unknown>) => {
     const createdAt = group.createdAt as { toMillis?: () => number } | undefined;
     return createdAt?.toMillis?.() ?? 0;
   };
@@ -138,6 +190,23 @@ export default function TeacherDashboard() {
       if (id) acc[id] = `Group ${index + 1}`;
       return acc;
     }, {});
+
+  const getGroupDisplayLabel = (group: ResearchGroup) => {
+    return group.title || groupLabelLookup[group.id || ''] || 'Group';
+  };
+
+  const getLeaderDisplayName = (group: ResearchGroup) => {
+    return leaderNames[String(group.leaderId ?? '')] || 'Leader';
+  };
+
+  const groupLeaderByGroupId = useMemo(() => {
+    return groups.reduce<Record<string, string>>((acc, group) => {
+      const groupId = String(group.id ?? '');
+      if (!groupId) return acc;
+      acc[groupId] = getLeaderDisplayName(group);
+      return acc;
+    }, {});
+  }, [groups, leaderNames]);
 
   if (loading) {
     return (
@@ -241,6 +310,47 @@ export default function TeacherDashboard() {
           </Card>
         </div>
 
+        <Card className="border-0 shadow-md mb-8">
+          <CardHeader>
+            <CardTitle>Approved Group Naming</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-slate-500">
+              After the PNC:PRE-FO-64/65 grouping form is approved, assign a clear label like Group 1 or Group 2.
+            </p>
+            {approvedGroups.length === 0 ? (
+              <p className="text-sm text-slate-500">No approved groupings yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {approvedGroups.map((group, index) => {
+                  const groupId = String(group.id ?? '');
+                  return (
+                    <div key={groupId} className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="text-sm font-semibold text-slate-900">
+                          {group.title || `Group ${index + 1}`}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          Leader: {getLeaderDisplayName(group)}
+                        </div>
+                      </div>
+                      <div className="flex w-full gap-2 sm:max-w-md">
+                        <Input
+                          value={groupTitleDrafts[groupId] ?? group.title ?? `Group ${index + 1}`}
+                          onChange={(e) => setGroupTitleDrafts((prev) => ({ ...prev, [groupId]: e.target.value }))}
+                        />
+                        <Button variant="outline" onClick={() => saveGroupTitle(groupId)}>
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="border-0 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -312,11 +422,16 @@ export default function TeacherDashboard() {
                 <div key={sub.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     {getStatusBadge(sub.status)}
-                    <span className="text-sm text-slate-600">{sub.groupTitle || 'Unnamed Group'}</span>
+                    <span className="text-sm text-slate-600">
+                      {sub.groupTitle || groupLabelLookup[sub.groupId] || sub.groupId || 'Group'}
+                    </span>
                   </div>
-                  <span className="text-xs text-slate-400">
-                    {sub.reviewedAt ? format(sub.reviewedAt.toDate(), 'MMM d') : 'Pending'}
-                  </span>
+                    <div className="text-right">
+                      <div className="text-xs text-slate-500">Leader: {groupLeaderByGroupId[sub.groupId] || 'Leader'}</div>
+                      <div className="text-xs text-slate-400">
+                        {sub.reviewedAt ? format(sub.reviewedAt.toDate(), 'MMM d') : 'Pending'}
+                      </div>
+                    </div>
                 </div>
               ))}
             </div>
