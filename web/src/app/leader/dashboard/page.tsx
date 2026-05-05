@@ -13,6 +13,8 @@ import { queries } from '@/lib/firestore/collections';
 import { onSnapshot } from 'firebase/firestore';
 import type { ResearchGroup, Submission } from '@/types/firestore';
 
+export const dynamic = 'force-dynamic';
+
 export default function LeaderDashboard() {
   const { user, userProfile, logout } = useAuth();
   const router = useRouter();
