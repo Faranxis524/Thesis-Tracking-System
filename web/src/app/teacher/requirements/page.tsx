@@ -240,13 +240,20 @@ export default function TeacherRequirementsPage() {
 
     const deadline = openingForm.deadlineAt ? Timestamp.fromDate(new Date(openingForm.deadlineAt)) : null;
 
+    // Propagate section-scoped openings to all groups in that section
+    const targetGroupIds = openingForm.scopeType === 'group'
+      ? [openingForm.groupId]
+      : openingForm.scopeType === 'section' && openingForm.sectionId
+        ? groups.filter((g) => g.sectionId === openingForm.sectionId).map((g) => String(g.id ?? '')).filter(Boolean)
+        : [];
+
     await addDoc(collections.formOpenings(), {
       requirementId: openingForm.requirementId,
       scopeType: openingForm.scopeType,
       termId: openingForm.scopeType === 'section' ? openingForm.termId || null : null,
       departmentId: openingForm.scopeType === 'section' ? openingForm.departmentId || null : null,
       sectionId: openingForm.scopeType === 'section' ? openingForm.sectionId || null : null,
-      groupIds: openingForm.scopeType === 'group' ? [openingForm.groupId] : [],
+      groupIds: targetGroupIds,
       deadlineAt: deadline,
       isOpen: true,
       createdBy: user.uid,
