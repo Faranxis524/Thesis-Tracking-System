@@ -79,33 +79,6 @@ export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowPr
     return stageRequirements.filter((req) => req.timing === 'before');
   }, [stageRequirements]);
 
-  const openRequirements = useMemo(() => {
-    if (!currentGroup) return [];
-    const now = new Date();
-    return openings.filter((opening) => {
-      if (!opening.isOpen) return false;
-
-      const openingStage = opening.requirementStage as string | undefined;
-      if (openingStage && openingStage !== stageKey) return false;
-
-      const deadlineAt = opening.deadlineAt as Timestamp | undefined;
-      const deadlineOk = !deadlineAt || deadlineAt.toDate() >= now;
-      if (!deadlineOk) return false;
-
-      if (opening.scopeType === 'group') {
-        const groupIds = opening.groupIds as string[] | undefined;
-        return (groupIds || []).includes(groupDocId);
-      }
-
-      if (opening.scopeType === 'section') {
-        const sectionId = opening.sectionId as string | undefined;
-        return !sectionId || sectionId === currentGroup.sectionId;
-      }
-
-      return false;
-    });
-  }, [currentGroup, openings, stageRequirements, groupDocId]);
-
   const submissionsByRequirement = useMemo(() => {
     if (!currentGroup) return {} as Record<string, Record<string, unknown>>;
     return submissions
@@ -127,7 +100,48 @@ export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowPr
      return submission?.status === 'approved';
    });
 
+  const effectiveStageKey = useMemo(() => {
+    if (!currentGroup) return 'title' as const;
+
+    if (currentGroup.stage === 'title' && stageApproved) {
+      return 'proposal' as const;
+    }
+
+    if (currentGroup.stage === 'proposal' && stageApproved) {
+      return 'final' as const;
+    }
+
+    return currentGroup.stage;
+  }, [currentGroup, stageApproved]);
+
   const canAdvanceStage = stageApproved && currentDefenseDone;
+
+  const openRequirements = useMemo(() => {
+    if (!currentGroup) return [];
+    const now = new Date();
+    return openings.filter((opening) => {
+      if (!opening.isOpen) return false;
+
+      const openingStage = opening.requirementStage as string | undefined;
+      if (openingStage && openingStage !== effectiveStageKey) return false;
+
+      const deadlineAt = opening.deadlineAt as Timestamp | undefined;
+      const deadlineOk = !deadlineAt || deadlineAt.toDate() >= now;
+      if (!deadlineOk) return false;
+
+      if (opening.scopeType === 'group') {
+        const groupIds = opening.groupIds as string[] | undefined;
+        return (groupIds || []).includes(groupDocId);
+      }
+
+      if (opening.scopeType === 'section') {
+        const sectionId = opening.sectionId as string | undefined;
+        return !sectionId || sectionId === currentGroup.sectionId;
+      }
+
+      return false;
+    });
+  }, [currentGroup, openings, effectiveStageKey, groupDocId]);
 
   useEffect(() => {
     if (groupId) {
@@ -464,7 +478,7 @@ export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowPr
         <CardContent>
           {/* DEBUG SUMMARY: show counts to help trace visibility */}
           <div className="mb-3 text-xs text-gray-500">
-            Observed openings: {openings.length} • Stage requirements: {stageRequirements.length} • Matching stage openings: {openRequirements.length} • Group ID: {groupDocId}
+            Observed openings: {openings.length} • Stage requirements: {stageRequirements.length} • Matching stage openings: {openRequirements.length} • Group ID: {groupDocId} • Effective stage: {effectiveStageKey} • Stored stage: {currentGroup.stage}
           </div>
           {openRequirements.length === 0 ? (
                <p className="text-sm text-gray-500">No open requirements for this stage yet.</p>
