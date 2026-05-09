@@ -536,6 +536,23 @@ export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowPr
                })}
              </div>
            )}
+        {/* Full openings debug list (helps trace missing matches) */}
+        <div className="mt-4 text-xs text-slate-600">
+          <div className="font-medium">All observed openings (debug):</div>
+          <div className="mt-2 space-y-2">
+            {openings.map((op) => (
+              <div key={op.id as string} className="p-2 border rounded bg-white">
+                <div>id: {op.id as string}</div>
+                <div>requirementId: {String(op.requirementId)}</div>
+                <div>requirementStage: {String((requirements.find((r) => (r as any).id === op.requirementId) as any)?.stage ?? 'unknown')}</div>
+                <div>scopeType: {String(op.scopeType)}</div>
+                <div>sectionId: {String(op.sectionId ?? '')}</div>
+                <div>groupIds: {((op.groupIds as string[]) || []).join(', ')}</div>
+                <div>isOpen: {String(op.isOpen)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
         </CardContent>
       </Card>
 
