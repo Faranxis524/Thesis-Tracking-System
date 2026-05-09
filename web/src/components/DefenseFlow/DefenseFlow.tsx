@@ -122,21 +122,30 @@ export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowPr
     return openings.filter((opening) => {
       if (!opening.isOpen) return false;
 
-      const openingStage = opening.requirementStage as string | undefined;
-      if (openingStage && openingStage !== effectiveStageKey) return false;
+      const openingStage = String(opening.requirementStage ?? '').trim().toLowerCase();
+      const stageToMatch = String(effectiveStageKey).trim().toLowerCase();
+      if (openingStage && openingStage !== stageToMatch) return false;
 
       const deadlineAt = opening.deadlineAt as Timestamp | undefined;
       const deadlineOk = !deadlineAt || deadlineAt.toDate() >= now;
       if (!deadlineOk) return false;
 
-      if (opening.scopeType === 'group') {
-        const groupIds = opening.groupIds as string[] | undefined;
-        return (groupIds || []).includes(groupDocId);
+      const scopeType = String(opening.scopeType ?? '').trim().toLowerCase();
+
+      if (scopeType === 'group') {
+        const rawGroupIds = opening.groupIds as unknown;
+        const groupIds = Array.isArray(rawGroupIds)
+          ? rawGroupIds.map((value) => String(value).trim())
+          : typeof rawGroupIds === 'string'
+            ? rawGroupIds.split(',').map((value) => value.trim()).filter(Boolean)
+            : [];
+
+        return groupIds.includes(String(groupDocId).trim());
       }
 
-      if (opening.scopeType === 'section') {
-        const sectionId = opening.sectionId as string | undefined;
-        return !sectionId || sectionId === currentGroup.sectionId;
+      if (scopeType === 'section') {
+        const sectionId = String(opening.sectionId ?? '').trim();
+        return !sectionId || sectionId === String(currentGroup.sectionId ?? '').trim();
       }
 
       return false;
