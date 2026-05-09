@@ -19,16 +19,25 @@ const admin = require('firebase-admin');
 const path = require('path');
 const fs = require('fs');
 
-// Initialize admin SDK using serviceAccountKey.json in repo root or GOOGLE_APPLICATION_CREDENTIALS env var
+// Initialize admin SDK using serviceAccountKey.json in repo root or GOOGLE_APPLICATION_CREDENTIALS env var.
+// If not found, fall back to Application Default Credentials (use `gcloud auth application-default login`).
 const keyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || path.join(process.cwd(), 'serviceAccountKey.json');
-if (!fs.existsSync(keyPath)) {
-  console.error('Service account key not found. Place serviceAccountKey.json in project root or set GOOGLE_APPLICATION_CREDENTIALS.');
-  process.exit(1);
+if (fs.existsSync(keyPath)) {
+  admin.initializeApp({
+    credential: admin.credential.cert(require(keyPath))
+  });
+} else {
+  console.warn('Service account key not found at', keyPath);
+  console.warn('Falling back to Application Default Credentials. Run `gcloud auth application-default login` if needed.');
+  try {
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault()
+    });
+  } catch (err) {
+    console.error('Failed to initialize Firebase Admin SDK with Application Default Credentials:', err);
+    process.exit(1);
+  }
 }
-
-admin.initializeApp({
-  credential: admin.credential.cert(require(keyPath))
-});
 
 const db = admin.firestore();
 
