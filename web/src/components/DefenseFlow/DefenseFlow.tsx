@@ -126,10 +126,6 @@ export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowPr
       const stageToMatch = String(effectiveStageKey).trim().toLowerCase();
       if (openingStage && openingStage !== stageToMatch) return false;
 
-      const deadlineAt = opening.deadlineAt as Timestamp | undefined;
-      const deadlineOk = !deadlineAt || deadlineAt.toDate() >= now;
-      if (!deadlineOk) return false;
-
       const scopeType = String(opening.scopeType ?? '').trim().toLowerCase();
 
       if (scopeType === 'group') {
