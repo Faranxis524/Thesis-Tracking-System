@@ -119,7 +119,7 @@ export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowPr
   const openRequirements = useMemo(() => {
     if (!currentGroup) return [];
     const now = new Date();
-    return openings.filter((opening) => {
+    const filtered = openings.filter((opening) => {
       if (!opening.isOpen) return false;
 
       const openingStage = String(opening.requirementStage ?? '').trim().toLowerCase();
@@ -145,6 +145,20 @@ export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowPr
       }
 
       return false;
+    });
+
+    // Deduplicate: keep only one opening per requirement, preferring section-scoped
+    const seen = new Set<string>();
+    return filtered.filter((opening) => {
+      const reqId = opening.requirementId as string;
+      if (seen.has(reqId)) return false;
+      seen.add(reqId);
+      return true;
+    }).sort((a, b) => {
+      // Sort section-scoped before group-scoped to ensure section is kept
+      const aIsSection = String(a.scopeType ?? '').trim().toLowerCase() === 'section' ? 0 : 1;
+      const bIsSection = String(b.scopeType ?? '').trim().toLowerCase() === 'section' ? 0 : 1;
+      return aIsSection - bIsSection;
     });
   }, [currentGroup, openings, effectiveStageKey, groupDocId]);
 
@@ -498,13 +512,6 @@ export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowPr
                         <div>
                           <p className="font-medium text-gray-900">
                             {requirement?.code ? `${String(requirement.code)} - ` : ''}{String((requirement as any)?.name ?? reqId ?? 'Open Requirement')}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Timing: {(requirement?.timing as string) || 'before/after'}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Scope: {(opening.scopeType as string) || 'section'}
-                            {opening.scopeType === 'section' && opening.sectionId ? ` • Section: ${opening.sectionId}` : ''}
                           </p>
                         {submission && (
                           <p className="text-xs text-emerald-700 mt-1">Status: {submission.status as string}</p>
