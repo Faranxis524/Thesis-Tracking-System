@@ -6,7 +6,7 @@ import { useDefenseFlowStore } from '@/store/defenseFlowStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { AlertCircle, CheckCircle2, Clock, BookOpen, Trophy, FileText, MessageSquare, Edit, Users } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, BookOpen, Trophy, FileText, MessageSquare, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { onSnapshot, addDoc, Timestamp, doc, updateDoc, collection, query, where, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -14,6 +14,7 @@ import { collections } from '@/lib/firestore/collections';
 
 interface DefenseFlowProps {
   groupId: string;
+  canManageDefense?: boolean;
 }
 
 const stages = [
@@ -46,7 +47,7 @@ const stages = [
   }
 ];
 
-export function DefenseFlow({ groupId }: DefenseFlowProps) {
+export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowProps) {
   const {
     currentGroup,
     loading,
@@ -117,21 +118,6 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
       }, {});
   }, [currentGroup, submissions, groupDocId]);
 
-  const groupingReqId = requirements.find((req) => req.code === 'PNC:PRE-FO-64/65')?.id as string | undefined;
-  const canEditMembers = groupingReqId
-    ? submissionsByRequirement[groupingReqId]?.status === 'approved'
-    : false;
-
-  const adviserReqId = requirements.find((req) => req.code === 'PNC:PRE-FO-59')?.id as string | undefined;
-  const canEditAdviser = adviserReqId
-    ? submissionsByRequirement[adviserReqId]?.status === 'approved'
-    : false;
-
-   const titleDefenseApproved = defenses.some(
-     (defense) => (defense.groupId as string) === groupDocId && (defense.stage as string) === 'title' && defense.status === 'done'
-   );
-  const canEditTitle = titleDefenseApproved;
-
    const currentDefenseDone = defenses.some(
      (defense) => (defense.groupId as string) === groupDocId && (defense.stage as string) === stageKey && defense.status === 'done'
    );
@@ -155,7 +141,15 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
       setRequirements(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
     const unsubOpenings = onSnapshot(collection(db, 'formOpenings'), (snap) => {
-      setOpenings(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      const docs = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setOpenings(docs);
+      // DEBUG: log openings and current group info to trace visibility issues
+      try {
+        // eslint-disable-next-line no-console
+        console.debug('DefenseFlow: formOpenings snapshot', { openings: docs, currentGroupSection: currentGroup?.sectionId, groupDocId, stageKey });
+      } catch (err) {
+        // ignore
+      }
     });
     const submissionsQuery = query(collection(db, 'submissions'), where('groupId', '==', groupDocId));
     const unsubSubmissions = onSnapshot(submissionsQuery, (snap) => {
@@ -413,30 +407,38 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
                     </div>
                     
                     {/* Stage Actions */}
-                    {index > 0 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => handleStageTransition(
-                          stages[index - 1].key
+                    {canManageDefense ? (
+                      <>
+                        {index > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => handleStageTransition(
+                              stages[index - 1].key
+                            )}
+                          >
+                            ← Revert to {stages[index - 1].label}
+                          </Button>
                         )}
-                      >
-                        ← Revert to {stages[index - 1].label}
-                      </Button>
-                    )}
-                    
-                    {index < stages.length - 1 && (
-                      <Button
-                        size="sm"
-                        className="w-full"
-                        disabled={!canAdvanceStage}
-                        onClick={() => handleStageTransition(
-                          stages[index + 1].key
+
+                        {index < stages.length - 1 && (
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            disabled={!canAdvanceStage}
+                            onClick={() => handleStageTransition(
+                              stages[index + 1].key
+                            )}
+                          >
+                            Advance to {stages[index + 1].label} →
+                          </Button>
                         )}
-                      >
-                        Advance to {stages[index + 1].label} →
-                      </Button>
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                        Stage changes are handled by the teacher.
+                      </p>
                     )}
                   </div>
                 )}
@@ -461,9 +463,13 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-{openRequirements.length === 0 ? (
-             <p className="text-sm text-gray-500">No open requirements for this stage yet.</p>
-           ) : (
+          {/* DEBUG SUMMARY: show counts to help trace visibility */}
+          <div className="mb-3 text-xs text-gray-500">
+            Observed openings: {openings.length} • Stage requirements: {stageRequirements.length} • Matching stage openings: {openRequirements.length} • Group ID: {groupDocId}
+          </div>
+          {openRequirements.length === 0 ? (
+               <p className="text-sm text-gray-500">No open requirements for this stage yet.</p>
+             ) : (
              <div className="space-y-4">
                 {openRequirements.map((req) => {
                   const reqId = req.id as string | undefined;
@@ -503,7 +509,6 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
                           </Button>
                          ) : isSubmitted && !isEditing ? (
                            <Button size="sm" variant="outline" onClick={() => setEditingLinks((prev) => ({ ...prev, [reqId as string]: true }))}>
-                             <Edit className="w-3 h-3 mr-1" />
                              Resubmit
                            </Button>
                          ) : submission?.status === 'needs_revision' ? (
@@ -562,15 +567,9 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
                  </div>
                  <div className="flex-1">
                    <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Research Adviser</p>
-                   {canEditAdviser ? (
-                     <p className="mt-1 text-lg font-semibold text-slate-900">
-                       {currentGroup.adviserName || 'Pending adviser'}
-                     </p>
-                   ) : (
-                     <p className="mt-1 text-base italic text-slate-500">
-                       Locked until Adviser Form is approved
-                     </p>
-                   )}
+                   <p className="mt-1 text-lg font-semibold text-slate-900">
+                     {currentGroup.adviserName || 'Pending adviser'}
+                   </p>
                  </div>
                </div>
              </div>
@@ -596,20 +595,14 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
                  </div>
                  <div className="flex-1">
                    <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Members</p>
-                   {canEditMembers ? (
-                     members.length === 0 ? (
-                       <p className="mt-1 text-base italic text-slate-500">No members added yet.</p>
-                     ) : (
-                       <div className="mt-2 space-y-1">
-                          {members.map((member) => (
-                            <p key={member.id as string} className="text-base text-slate-700">• {(member.displayName as string | undefined) || (member.userId as string)}</p>
-                          ))}
-                       </div>
-                     )
+                   {members.length === 0 ? (
+                     <p className="mt-1 text-base italic text-slate-500">No members added yet.</p>
                    ) : (
-                     <p className="mt-1 text-base italic text-slate-500">
-                       Locked until grouping form is approved
-                     </p>
+                     <div className="mt-2 space-y-1">
+                        {members.map((member) => (
+                          <p key={member.id as string} className="text-base text-slate-700">• {(member.displayName as string | undefined) || (member.userId as string)}</p>
+                        ))}
+                     </div>
                    )}
                  </div>
                </div>
@@ -617,75 +610,6 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
            </div>
          </CardContent>
        </Card>
-
-      {/* Unlocks */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Unlocked Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg border p-4">
-            <p className="font-medium text-gray-900">Group Members</p>
-            <p className="text-xs text-gray-500">Unlocks after PNC:PRE-FO-64/65 is approved.</p>
-            {canEditMembers ? (
-              <div className="mt-3 space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
-                    placeholder="Add member name"
-                    value={memberName}
-                    onChange={(e) => setMemberName(e.target.value)}
-                  />
-                  <Button size="sm" onClick={addMember}>Add</Button>
-                </div>
-                <div className="space-y-1">
-                   {members.map((member) => (
-                     <p key={member.id as string} className="text-sm text-gray-700">• {(member.displayName as string | undefined) || member.userId as string}</p>
-                   ))}
-                </div>
-              </div>
-            ) : (
-              <p className="mt-2 text-sm text-gray-500">Locked</p>
-            )}
-          </div>
-
-          <div className="rounded-lg border p-4">
-            <p className="font-medium text-gray-900">Research Title</p>
-            <p className="text-xs text-gray-500">Unlocks after Title Defense is marked done.</p>
-            {canEditTitle ? (
-              <div className="mt-3 flex gap-2">
-                <input
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
-                  placeholder="Enter research title"
-                  value={titleDraft}
-                  onChange={(e) => setTitleDraft(e.target.value)}
-                />
-                <Button size="sm" onClick={saveTitle}>Save</Button>
-              </div>
-            ) : (
-              <p className="mt-2 text-sm text-gray-500">Locked</p>
-            )}
-          </div>
-
-          <div className="rounded-lg border p-4">
-            <p className="font-medium text-gray-900">Research Adviser</p>
-            <p className="text-xs text-gray-500">Unlocks after PNC:PRE-FO-59 is approved.</p>
-            {canEditAdviser ? (
-              <div className="mt-3 flex gap-2">
-                <input
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
-                  placeholder="Enter adviser name"
-                  value={adviserDraft}
-                  onChange={(e) => setAdviserDraft(e.target.value)}
-                />
-                <Button size="sm" onClick={saveAdviser}>Save</Button>
-              </div>
-            ) : (
-              <p className="mt-2 text-sm text-gray-500">Locked</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Timeline */}
       <Card>
@@ -738,6 +662,35 @@ export function DefenseFlow({ groupId }: DefenseFlowProps) {
                       <span className="inline-block mt-2 text-xs bg-emerald-100 text-emerald-900 px-2 py-1 rounded">
                         In Progress
                       </span>
+                    )}
+                    {defense && defense.status !== 'cancelled' && (
+                      <div className="mt-3 flex gap-2">
+                        {defense.status === 'scheduled' && (
+                          <Button
+                            size="sm"
+                            onClick={async () => {
+                              if (confirm('Mark this defense as done?')) {
+                                try {
+                                  await updateDoc(doc(db, 'defenses', defense.id as string), {
+                                    status: 'done',
+                                    updatedAt: Timestamp.now()
+                                  });
+                                } catch (err) {
+                                  console.error('Error updating defense:', err);
+                                  alert('Failed to mark defense as done');
+                                }
+                              }
+                            }}
+                          >
+                            Mark Done
+                          </Button>
+                        )}
+                        {defense.status === 'done' && (
+                          <span className="text-xs bg-green-100 text-green-900 px-2 py-1 rounded">
+                            ✓ Completed
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

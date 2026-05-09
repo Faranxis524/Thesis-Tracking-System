@@ -11,7 +11,7 @@
 
 Your Next.js project (`web/` folder) should have:
 - `package.json` - Dependencies and scripts
-- `next.config.ts` - Next.js configuration with `output: "standalone"`
+- `next.config.ts` - Next.js configuration for the app
 - `vercel.json` - Vercel deployment configuration
 - `tsconfig.json` - TypeScript configuration
 - `src/` - Application source code
@@ -69,6 +69,7 @@ vercel
    - **Build Command**: `npm run build`
    - **Output Directory**: `.next` (auto-detected)
    - **Root Directory**: `/web`
+   - **Install Command**: `npm install`
 
 ## Step 4: Configure Environment Variables
 
@@ -85,6 +86,10 @@ In your Vercel dashboard:
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Your Firebase storage bucket | Production, Preview, Development |
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Your Firebase sender ID | Production, Preview, Development |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | Your Firebase app ID | Production, Preview, Development |
+
+Also add your Vercel domain in Firebase Authentication → Settings → Authorized domains:
+- Your production domain, for example `your-project.vercel.app`
+- Any custom domain you connect later
 
 ## Step 5: Deploy Firebase Functions Separately
 
@@ -131,11 +136,13 @@ For automatic deployments on Git push:
 - Check build logs in Vercel dashboard
 - Ensure all dependencies are in `package.json`
 - Verify TypeScript compiles without errors (`npm run build`)
+- Make sure the Vercel project root is set to `web`
 
 ### Firebase Connection Issues
 - Verify environment variables are set correctly
 - Check Firebase console for quota limits
 - Ensure Firebase API is enabled
+- Confirm the Firebase Auth authorized domains include your Vercel domain
 
 ### CORS Issues
 - Add your Vercel domains to Firebase Auth authorized domains
@@ -152,6 +159,7 @@ For automatic deployments on Git push:
 - [ ] Environment variables configured
 - [ ] Firebase Functions deployed
 - [ ] Firestore rules and indexes deployed
+- [ ] Firebase Auth authorized domains updated
 - [ ] Custom domain configured (if applicable)
 - [ ] SSL certificate active
 - [ ] CI/CD pipeline configured

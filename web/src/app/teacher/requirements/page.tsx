@@ -9,13 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { onSnapshot, addDoc, Timestamp, updateDoc, doc } from 'firebase/firestore';
 import { collections } from '@/lib/firestore/collections';
+import { Edit2, Trash2 } from 'lucide-react';
 
 type OpeningScope = 'section' | 'group';
 
-import type { Requirement, FormOpening, ResearchGroup, Term, Department, Section, Defense } from '@/types/firestore';
+import type { Requirement, FormOpening, ResearchGroup, Term, Department, Section, Defense, Submission } from '@/types/firestore';
 
 export default function TeacherRequirementsPage() {
   const { user, userProfile } = useAuth();
@@ -23,6 +25,7 @@ export default function TeacherRequirementsPage() {
 
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [formOpenings, setFormOpenings] = useState<FormOpening[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [groups, setGroups] = useState<ResearchGroup[]>([]);
   const [terms, setTerms] = useState<Term[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -39,6 +42,12 @@ export default function TeacherRequirementsPage() {
     deadlineAt: ''
   });
 
+  // Filters for Active Openings
+  const [activeOpeningsFilters, setActiveOpeningsFilters] = useState({
+    sectionId: '',
+    groupId: ''
+  });
+
   const [scheduleForm, setScheduleForm] = useState({
     groupId: '',
     stage: 'title' as 'title' | 'proposal' | 'final',
@@ -46,6 +55,16 @@ export default function TeacherRequirementsPage() {
     location: '',
     notes: ''
   });
+
+  // Edit defense state
+  const [editingDefenseId, setEditingDefenseId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    scheduledAt: '',
+    location: '',
+    notes: ''
+  });
+  const [editError, setEditError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<{ id: string; action: string } | null>(null);
 
   const requirementLookup = useMemo(() => {
     return requirements.reduce<Record<string, Requirement>>((acc, req) => {
@@ -115,6 +134,9 @@ export default function TeacherRequirementsPage() {
     const unsubOpenings = onSnapshot(collections.formOpenings(), (snap) => {
       setFormOpenings(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
+    const unsubSubmissions = onSnapshot(collections.submissions(), (snap) => {
+      setSubmissions(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    });
     const unsubGroups = onSnapshot(collections.groups(), (snap) => {
       setGroups(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
@@ -134,6 +156,7 @@ export default function TeacherRequirementsPage() {
     return () => {
       unsubRequirements();
       unsubOpenings();
+      unsubSubmissions();
       unsubGroups();
       unsubDefenses();
       unsubTerms();
@@ -141,6 +164,49 @@ export default function TeacherRequirementsPage() {
       unsubSections();
     };
   }, []);
+
+  const getOpeningTargetGroupIds = (opening: FormOpening) => {
+    if (opening.scopeType === 'group') {
+      return (opening.groupIds || []).filter(Boolean);
+    }
+
+    if (opening.scopeType === 'section' && opening.sectionId) {
+      return groups
+        .filter((group) => group.sectionId === opening.sectionId)
+        .map((group) => String(group.id ?? ''))
+        .filter(Boolean);
+    }
+
+    return [] as string[];
+  };
+
+  const getOpeningGroupStatus = (groupId: string, requirementId: string) => {
+    const submission = submissions.find(
+      (item) => item.groupId === groupId && item.requirementId === requirementId
+    );
+
+    if (!submission) {
+      return { label: 'Pending', className: 'bg-slate-100 text-slate-700' };
+    }
+
+    if (submission.status === 'approved') {
+      return { label: 'Approved', className: 'bg-emerald-100 text-emerald-800' };
+    }
+
+    if (submission.status === 'needs_revision') {
+      return { label: 'Needs Revision', className: 'bg-red-100 text-red-800' };
+    }
+
+    if (submission.status === 'resubmitted') {
+      return { label: 'Resubmitted', className: 'bg-purple-100 text-purple-800' };
+    }
+
+    if (submission.status === 'submitted') {
+      return { label: 'Submitted', className: 'bg-blue-100 text-blue-800' };
+    }
+
+    return { label: 'Missing', className: 'bg-slate-100 text-slate-700' };
+  };
 
   const scopedSections = useMemo(() => {
     return sections.filter((section) => {
@@ -155,6 +221,22 @@ export default function TeacherRequirementsPage() {
     if (!openingForm.requirementId) return;
     if (openingForm.scopeType === 'section' && !openingForm.sectionId) return;
     if (openingForm.scopeType === 'group' && !openingForm.groupId) return;
+
+    const duplicateOpening = formOpenings.find((opening) => {
+      if (opening.requirementId !== openingForm.requirementId) return false;
+      if (opening.scopeType !== openingForm.scopeType) return false;
+
+      if (openingForm.scopeType === 'section') {
+        return opening.sectionId === openingForm.sectionId;
+      }
+
+      return (opening.groupIds || []).includes(openingForm.groupId);
+    });
+
+    if (duplicateOpening) {
+      alert('This requirement is already open for the selected scope. Use the existing opening instead of creating a duplicate.');
+      return;
+    }
 
     const deadline = openingForm.deadlineAt ? Timestamp.fromDate(new Date(openingForm.deadlineAt)) : null;
 
@@ -209,10 +291,52 @@ export default function TeacherRequirementsPage() {
   };
 
   const updateDefenseStatus = async (defenseId: string, status: 'scheduled' | 'done' | 'cancelled') => {
-    await updateDoc(doc(collections.defenses(), defenseId), {
-      status,
-      updatedAt: Timestamp.now()
+    try {
+      setActionLoading({ id: defenseId, action: status });
+      await updateDoc(doc(collections.defenses(), defenseId), {
+        status,
+        updatedAt: Timestamp.now()
+      });
+      setActionLoading(null);
+    } catch (err) {
+      console.error(`Error updating defense status to ${status}:`, err);
+      alert(`Failed to update defense status. Please try again.`);
+      setActionLoading(null);
+    }
+  };
+
+  const handleEditDefense = (defense: Defense) => {
+    setEditingDefenseId(defense.id || null);
+    const scheduledDate = defense.scheduledAt instanceof Timestamp 
+      ? defense.scheduledAt.toDate() 
+      : new Date(defense.scheduledAt as any);
+    const isoString = scheduledDate.toISOString().slice(0, 16);
+    setEditForm({
+      scheduledAt: isoString,
+      location: defense.meetLink || '',
+      notes: defense.notes || ''
     });
+    setEditError(null);
+  };
+
+  const handleSaveDefense = async (defenseId: string) => {
+    if (!editForm.scheduledAt) {
+      setEditError('Please select a date and time');
+      return;
+    }
+    try {
+      await updateDoc(doc(collections.defenses(), defenseId), {
+        scheduledAt: Timestamp.fromDate(new Date(editForm.scheduledAt)),
+        meetLink: editForm.location || null,
+        notes: editForm.notes || null,
+        updatedAt: Timestamp.now()
+      });
+      setEditingDefenseId(null);
+      setEditError(null);
+    } catch (err) {
+      console.error('Error saving defense:', err);
+      setEditError('Failed to save defense. Please try again.');
+    }
   };
 
   return (
@@ -351,32 +475,113 @@ export default function TeacherRequirementsPage() {
           <CardHeader>
             <CardTitle>Active Openings</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
+            {/* Filters */}
+            <div className="flex gap-2 items-end">
+              <div>
+                <Label>Filter by Section</Label>
+                <select
+                  value={activeOpeningsFilters.sectionId}
+                  onChange={(e) => setActiveOpeningsFilters(prev => ({ ...prev, sectionId: e.target.value }))}
+                  className="mt-1 px-3 py-2 border border-slate-300 rounded-md text-sm"
+                >
+                  <option value="">All Sections</option>
+                  {sections.map(section => (
+                    <option key={section.id} value={section.id}>{section.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label>Filter by Group</Label>
+                <select
+                  value={activeOpeningsFilters.groupId}
+                  onChange={(e) => setActiveOpeningsFilters(prev => ({ ...prev, groupId: e.target.value }))}
+                  className="mt-1 px-3 py-2 border border-slate-300 rounded-md text-sm"
+                >
+                  <option value="">All Groups</option>
+                  {groups.map(group => (
+                    <option key={group.id} value={group.id}>{group.title || groupLabelLookup[group.id!]}</option>
+                  ))}
+                </select>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setActiveOpeningsFilters({ sectionId: '', groupId: '' })}
+              >
+                Clear Filters
+              </Button>
+            </div>
+
+            {/* Openings List */}
             {formOpenings.length === 0 ? (
               <p className="text-sm text-slate-500">No openings yet.</p>
             ) : (
-              formOpenings.map((opening) => (
-                <div key={opening.id} className="flex items-center justify-between rounded-lg border p-3">
-                  <div>
-                    <p className="font-medium text-slate-900">
-                      {requirementLookup[opening.requirementId]?.code
-                        ? `${requirementLookup[opening.requirementId]?.code} - ${requirementLookup[opening.requirementId]?.name}`
-                        : requirementLookup[opening.requirementId]?.name || opening.requirementId}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Scope: {opening.scopeType || 'section'}
-                    </p>
-                    {opening.scopeType === 'group' && opening.groupIds?.length ? (
-                      <p className="text-xs text-slate-500">
-                        Group: {groupLabelLookup[opening.groupIds[0]] || opening.groupIds[0]}
+              <div className="space-y-3">
+                {formOpenings
+                  .filter(opening => {
+                    // Filter by section if selected
+                    if (activeOpeningsFilters.sectionId && opening.sectionId !== activeOpeningsFilters.sectionId) {
+                      return false;
+                    }
+                    // Filter by group if selected
+                    if (activeOpeningsFilters.groupId && !(opening.groupIds as string[])?.includes(activeOpeningsFilters.groupId)) {
+                      return false;
+                    }
+                    return true;
+                  })
+                  .map((opening) => (
+                  <div key={opening.id} className="rounded-lg border p-3 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-slate-900">
+                          {requirementLookup[opening.requirementId]?.code
+                            ? `${requirementLookup[opening.requirementId]?.code} - ${requirementLookup[opening.requirementId]?.name}`
+                            : requirementLookup[opening.requirementId]?.name || opening.requirementId}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Scope: {opening.scopeType || 'section'}
+                        </p>
+                        {opening.scopeType === 'group' && opening.groupIds?.length ? (
+                          <p className="text-xs text-slate-500">
+                            Group: {groupLabelLookup[opening.groupIds[0]] || opening.groupIds[0]}
+                          </p>
+                        ) : null}
+                        {opening.sectionId && (
+                          <p className="text-xs text-slate-500">
+                            Section: {sections.find(s => s.id === opening.sectionId)?.name}
+                          </p>
+                        )}
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => toggleOpening(opening.id || '', !opening.isOpen)}>
+                        {opening.isOpen ? 'Close' : 'Re-open'}
+                      </Button>
+                    </div>
+
+                    <div className="rounded-md bg-slate-50 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+                        Group Progress for This Document
                       </p>
-                    ) : null}
+                      <div className="space-y-2">
+                        {getOpeningTargetGroupIds(opening).length === 0 ? (
+                          <p className="text-xs text-slate-500">No groups found for this scope.</p>
+                        ) : (
+                          getOpeningTargetGroupIds(opening).map((groupId) => {
+                            const status = getOpeningGroupStatus(groupId, opening.requirementId);
+                            return (
+                              <div key={`${opening.id}-${groupId}`} className="flex items-center justify-between gap-3 text-xs">
+                                <span className="font-medium text-slate-700">
+                                  {groupLabelLookup[groupId] || groupId}
+                                </span>
+                                <Badge className={status.className}>{status.label}</Badge>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
                   </div>
-                   <Button variant="outline" size="sm" onClick={() => toggleOpening(opening.id || '', !opening.isOpen)}>
-                    {opening.isOpen ? 'Close' : 'Re-open'}
-                  </Button>
-                </div>
-              ))
+                  ))}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -453,28 +658,106 @@ export default function TeacherRequirementsPage() {
               <p className="text-sm text-slate-500">No schedules yet.</p>
             ) : (
               defenses.map((defense) => (
-                <div key={defense.id} className="flex items-center justify-between rounded-lg border p-3">
-                  <div>
-                    <p className="font-medium text-slate-900">{defense.stage} defense</p>
-                    <p className="text-xs text-slate-500">
-                      {groupLabelLookup[defense.groupId] || defense.groupId}
-                    </p>
-                    <p className="text-xs text-slate-500">{defense.scheduledAt?.toDate?.().toLocaleString?.() || 'No date'}</p>
-                    {defense.meetLink && (
-                      <p className="text-xs text-slate-500">Location: {defense.meetLink}</p>
-                    )}
-                    {defense.notes && (
-                      <p className="text-xs text-slate-500">Notes: {defense.notes}</p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                     <Button size="sm" variant="outline" onClick={() => updateDefenseStatus(defense.id || '', 'done')}>
-                      Mark Done
-                    </Button>
-                     <Button size="sm" variant="ghost" onClick={() => updateDefenseStatus(defense.id || '', 'cancelled')}>
-                      Cancel
-                    </Button>
-                  </div>
+                <div key={defense.id} className="rounded-lg border p-3">
+                  {editingDefenseId === defense.id ? (
+                    // Edit form
+                    <div className="space-y-3">
+                      <div>
+                        <Label>Date & Time</Label>
+                        <Input
+                          type="datetime-local"
+                          value={editForm.scheduledAt}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, scheduledAt: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Location / Link</Label>
+                        <Input
+                          placeholder="Room / Google Meet link"
+                          value={editForm.location}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, location: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Notes (optional)</Label>
+                        <Input
+                          placeholder="Additional notes"
+                          value={editForm.notes}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, notes: e.target.value }))}
+                        />
+                      </div>
+                      {editError && (
+                        <p className="text-sm text-red-600">{editError}</p>
+                      )}
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => handleSaveDefense(defense.id || '')}>
+                          Save
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => {
+                          setEditingDefenseId(null);
+                          setEditError(null);
+                        }}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    // Display mode
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900">{defense.stage} defense</p>
+                        <p className="text-xs text-slate-500">
+                          {groupLabelLookup[defense.groupId] || defense.groupId}
+                        </p>
+                        <p className="text-xs text-slate-500">{defense.scheduledAt?.toDate?.().toLocaleString?.() || 'No date'}</p>
+                        {defense.meetLink && (
+                          <p className="text-xs text-slate-500">Location: {defense.meetLink}</p>
+                        )}
+                        {defense.notes && (
+                          <p className="text-xs text-slate-500">Notes: {defense.notes}</p>
+                        )}
+                        {defense.status && (
+                          <p className={`text-xs mt-1 px-2 py-1 rounded inline-block ${
+                            defense.status === 'done' ? 'bg-green-100 text-green-800' :
+                            defense.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {defense.status === 'done' ? '✓ Done' : defense.status === 'cancelled' ? '✗ Cancelled' : 'Scheduled'}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleEditDefense(defense)}>
+                          <Edit2 className="w-3 h-3 mr-1" />
+                          Edit
+                        </Button>
+                        {defense.status !== 'done' && (
+                          <Button 
+                            size="sm" 
+                            onClick={() => updateDefenseStatus(defense.id || '', 'done')}
+                            disabled={actionLoading?.id === defense.id && actionLoading?.action === 'done'}
+                          >
+                            {actionLoading?.id === defense.id && actionLoading?.action === 'done' ? 'Marking...' : 'Mark Done'}
+                          </Button>
+                        )}
+                        {defense.status !== 'cancelled' && (
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => {
+                              if (confirm('Cancel this defense schedule?')) {
+                                updateDefenseStatus(defense.id || '', 'cancelled');
+                              }
+                            }}
+                            disabled={actionLoading?.id === defense.id && actionLoading?.action === 'cancelled'}
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            {actionLoading?.id === defense.id && actionLoading?.action === 'cancelled' ? 'Cancelling...' : 'Cancel'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))
             )}

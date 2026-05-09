@@ -261,6 +261,7 @@ export default function TeacherDashboard() {
                 <div>
                   <p className="text-sm font-medium text-slate-600">Total Groups</p>
                   <p className="text-2xl font-bold text-slate-900">{groups.length}</p>
+                  <p className="text-xs text-slate-500 mt-1">Including pending</p>
                 </div>
                 <div className="p-3 bg-emerald-100 rounded-xl">
                   <Users className="w-6 h-6 text-emerald-700" />
@@ -328,14 +329,17 @@ export default function TeacherDashboard() {
                   const groupId = String(group.id ?? '');
                   return (
                     <div key={groupId} className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="text-sm font-semibold text-slate-900">
+                      <button
+                        onClick={() => router.push(`/teacher/group/${groupId}`)}
+                        className="text-left hover:opacity-75 transition-opacity"
+                      >
+                        <div className="text-sm font-semibold text-slate-900 hover:text-emerald-600 underline">
                           {group.title || `Group ${index + 1}`}
                         </div>
                         <div className="text-xs text-slate-500">
                           Leader: {getLeaderDisplayName(group)}
                         </div>
-                      </div>
+                      </button>
                       <div className="flex w-full gap-2 sm:max-w-md">
                         <Input
                           value={groupTitleDrafts[groupId] ?? group.title ?? `Group ${index + 1}`}
@@ -420,22 +424,35 @@ export default function TeacherDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {submissions.slice(0, 5).map((sub) => (
-                <div key={sub.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    {getStatusBadge(sub.status)}
-                    <span className="text-sm text-slate-600">
-                      {sub.groupTitle || groupLabelLookup[sub.groupId] || sub.groupId || 'Group'}
-                    </span>
-                  </div>
+              {submissions.slice(0, 5).map((sub) => {
+                const requirement = requirements.find(r => r.id === sub.requirementId);
+                return (
+                  <div key={sub.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div className="flex items-center gap-3 flex-1">
+                      {getStatusBadge(sub.status)}
+                      <div className="flex-1">
+                        <p className="text-sm text-slate-600">
+                          {sub.groupTitle || groupLabelLookup[sub.groupId] || sub.groupId || 'Group'}
+                          {requirement && ` - ${requirement.code || requirement.name}`}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {sub.status === 'approved' && 'Approved'}
+                          {sub.status === 'submitted' && 'Submitted for review'}
+                          {sub.status === 'needs_revision' && 'Revision requested'}
+                          {sub.status === 'resubmitted' && 'Resubmitted after revision'}
+                          {sub.status === 'missing' && 'Missing'}
+                        </p>
+                      </div>
+                    </div>
                     <div className="text-right">
                       <div className="text-xs text-slate-500">Leader: {groupLeaderByGroupId[sub.groupId] || 'Leader'}</div>
                       <div className="text-xs text-slate-400">
                         {sub.reviewedAt ? format(sub.reviewedAt.toDate(), 'MMM d') : 'Pending'}
                       </div>
                     </div>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

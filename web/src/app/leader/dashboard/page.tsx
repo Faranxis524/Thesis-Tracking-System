@@ -10,8 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Users, FileText, Calendar, Settings, GraduationCap } from 'lucide-react';
 import { queries } from '@/lib/firestore/collections';
-import { onSnapshot } from 'firebase/firestore';
-import type { ResearchGroup, Submission } from '@/types/firestore';
+import { onSnapshot, collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { ResearchGroup, Submission, Defense } from '@/types/firestore';
+import { format } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,9 +24,10 @@ export default function LeaderDashboard() {
   
   const [groups, setGroups] = useState<ResearchGroup[]>([]);
   const [submissions] = useState<Submission[]>([]);
+  const [defenses, setDefenses] = useState<(Defense & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const groupLabel = groups.length > 0 ? `Group 1` : null;
+  const groupLabel = groups.length > 0 ? (groups[0].title || 'Group 1') : null;
 
   useEffect(() => {
     // If user is null, redirect to login
@@ -67,6 +70,29 @@ export default function LeaderDashboard() {
       fetchGroup(groupId);
     }
   }, [groups, fetchGroup]);
+
+  // Fetch scheduled defenses for leader's group
+  useEffect(() => {
+    if (groups.length === 0) return;
+
+    const groupId = groups[0].id as string;
+    const unsubscribeDefenses = onSnapshot(
+      collection(db, 'defenses'),
+      (snapshot) => {
+        const defensesData = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as Defense & { id: string }))
+          .filter(defense => defense.groupId === groupId && defense.status !== 'cancelled')
+          .sort((a, b) => {
+            const aTime = (a.scheduledAt as any)?.toMillis?.() ?? 0;
+            const bTime = (b.scheduledAt as any)?.toMillis?.() ?? 0;
+            return aTime - bTime;
+          });
+        setDefenses(defensesData);
+      }
+    );
+
+    return () => unsubscribeDefenses();
+  }, [groups]);
 
   if (loading) {
     return (
@@ -130,7 +156,10 @@ export default function LeaderDashboard() {
              </CardContent>
            </Card>
 
-           <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+           <Card 
+             className="border-0 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+             onClick={() => router.push('/leader/groups')}
+           >
              <CardContent className="p-6">
                <div className="flex items-center justify-between">
                  <div>
@@ -148,8 +177,8 @@ export default function LeaderDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Defenses</p>
-                  <p className="text-2xl font-bold text-slate-900">-</p>
+                  <p className="text-sm font-medium text-slate-600">Scheduled Defenses</p>
+                  <p className="text-2xl font-bold text-slate-900">{defenses.length}</p>
                 </div>
                 <div className="p-3 bg-emerald-100 rounded-xl">
                   <Calendar className="w-6 h-6 text-emerald-700" />
@@ -163,7 +192,7 @@ export default function LeaderDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Settings</p>
-                  <Button variant="ghost" size="sm" className="mt-2" onClick={() => router.push('/profile')}>
+                  <Button variant="ghost" size="sm" className="mt-2" onClick={() => router.push('/leader/group-settings')}>
                     <Settings className="w-4 h-4" />
                   </Button>
                 </div>
@@ -174,6 +203,44 @@ export default function LeaderDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Scheduled Defenses */}
+        {groups.length > 0 && defenses.length > 0 && (
+          <Card className="mb-8 border-0 shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Scheduled Defenses
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {defenses.map((defense) => (
+                <div key={defense.id} className="flex items-start justify-between p-4 bg-slate-50 rounded-lg border">
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900 capitalize">{defense.stage} Defense</p>
+                    <p className="text-sm text-slate-600 mt-1">
+                      📅 {format(
+                        (defense.scheduledAt as any)?.toDate?.() ? (defense.scheduledAt as any).toDate() : new Date(defense.scheduledAt as any),
+                        'MMM d, yyyy - h:mm a'
+                      )}
+                    </p>
+                    {defense.meetLink && (
+                      <p className="text-sm text-slate-600">🔗 {defense.meetLink}</p>
+                    )}
+                    {defense.notes && (
+                      <p className="text-sm text-slate-600 mt-1">📝 {defense.notes}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-block bg-emerald-100 text-emerald-800 text-xs font-semibold px-3 py-1 rounded">
+                      {defense.status === 'done' ? '✓ Done' : 'Scheduled'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Defense Flow */}
         {groups.length > 0 && (

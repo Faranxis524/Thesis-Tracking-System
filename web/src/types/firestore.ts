@@ -44,10 +44,11 @@ export interface ResearchGroup extends BaseDocument {
   termId: string;
   departmentId?: string;
   sectionId: string;
-  title: string | null;
+  name?: string | null; // Auto-generated identifier (Group 1, Group 2, etc.)
+  title: string | null; // Research title
   adviserName: string | null;
   stage: 'title' | 'proposal' | 'final';
-  status: 'pending' | 'active';
+  status: 'pending' | 'active'; // pending: not approved yet, active: approved
 }
 
 // Group Member

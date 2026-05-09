@@ -13,8 +13,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Consolas", monospace;
 }
 
 
@@ -23,7 +23,7 @@ body {
     radial-gradient(1200px 700px at 110% 10%, #bfdbfe 0%, transparent 50%),
     var(--background);
   color: var(--foreground);
-  font-family: var(--font-bricolage), "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-sans);
 }
 
 .glass-panel {
