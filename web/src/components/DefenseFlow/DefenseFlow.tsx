@@ -82,28 +82,27 @@ export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowPr
   const openRequirements = useMemo(() => {
     if (!currentGroup) return [];
     const now = new Date();
-     return stageRequirements.filter((req) => {
-       const relatedOpenings = openings.filter((opening) => {
-         const reqId = opening.requirementId as string | undefined;
-         const reqId2 = req.id as string | undefined;
-         return reqId === reqId2 && opening.isOpen;
-       });
-       return relatedOpenings.some((opening) => {
-         const deadlineAt = opening.deadlineAt as Timestamp | undefined;
-         const deadlineOk = !deadlineAt || deadlineAt.toDate() >= now;
-         if (!deadlineOk) return false;
+    return openings.filter((opening) => {
+      if (!opening.isOpen) return false;
 
-         if (opening.scopeType === 'group') {
-           const groupIds = opening.groupIds as string[] | undefined;
-           return (groupIds || []).includes(groupDocId);
-         }
+      const openingStage = opening.requirementStage as string | undefined;
+      if (openingStage && openingStage !== stageKey) return false;
 
-         if (opening.sectionId) {
-           const secId = opening.sectionId as string;
-           return secId === currentGroup.sectionId;
-         }
-        return true;
-      });
+      const deadlineAt = opening.deadlineAt as Timestamp | undefined;
+      const deadlineOk = !deadlineAt || deadlineAt.toDate() >= now;
+      if (!deadlineOk) return false;
+
+      if (opening.scopeType === 'group') {
+        const groupIds = opening.groupIds as string[] | undefined;
+        return (groupIds || []).includes(groupDocId);
+      }
+
+      if (opening.scopeType === 'section') {
+        const sectionId = opening.sectionId as string | undefined;
+        return !sectionId || sectionId === currentGroup.sectionId;
+      }
+
+      return false;
     });
   }, [currentGroup, openings, stageRequirements, groupDocId]);
 
@@ -471,8 +470,9 @@ export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowPr
                <p className="text-sm text-gray-500">No open requirements for this stage yet.</p>
              ) : (
              <div className="space-y-4">
-                {openRequirements.map((req) => {
-                  const reqId = req.id as string | undefined;
+                {openRequirements.map((opening) => {
+                  const reqId = opening.requirementId as string | undefined;
+                  const requirement = requirements.find((req) => String((req as any).id ?? '') === reqId);
                   const submission = submissionsByRequirement[reqId as string];
                   const isEditing = editingLinks[reqId as string] ?? false;
                  const isApproved = submission?.status === 'approved';
@@ -482,9 +482,15 @@ export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowPr
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="font-medium text-gray-900">
-                            {((req.code as string) || req.name) ? `${req.code as string} - ` : ''}{(req.name as string)}
+                            {requirement?.code ? `${String(requirement.code)} - ` : ''}{String((requirement as any)?.name ?? reqId ?? 'Open Requirement')}
                           </p>
-                          <p className="text-xs text-gray-500">Timing: {req.timing as string}</p>
+                          <p className="text-xs text-gray-500">
+                            Timing: {(requirement?.timing as string) || 'before/after'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Scope: {(opening.scopeType as string) || 'section'}
+                            {opening.scopeType === 'section' && opening.sectionId ? ` • Section: ${opening.sectionId}` : ''}
+                          </p>
                         {submission && (
                           <p className="text-xs text-emerald-700 mt-1">Status: {submission.status as string}</p>
                         )}
@@ -539,12 +545,12 @@ export function DefenseFlow({ groupId, canManageDefense = false }: DefenseFlowPr
         {/* Full openings debug list (helps trace missing matches) */}
         <div className="mt-4 text-xs text-slate-600">
           <div className="font-medium">All observed openings (debug):</div>
-          <div className="mt-2 space-y-2">
+               <div className="mt-2 space-y-2">
             {openings.map((op) => (
               <div key={op.id as string} className="p-2 border rounded bg-white">
                 <div>id: {op.id as string}</div>
                 <div>requirementId: {String(op.requirementId)}</div>
-                <div>requirementStage: {String((requirements.find((r) => (r as any).id === op.requirementId) as any)?.stage ?? 'unknown')}</div>
+                <div>requirementStage: {String(op.requirementStage ?? 'unknown')}</div>
                 <div>scopeType: {String(op.scopeType)}</div>
                 <div>sectionId: {String(op.sectionId ?? '')}</div>
                 <div>groupIds: {((op.groupIds as string[]) || []).join(', ')}</div>
